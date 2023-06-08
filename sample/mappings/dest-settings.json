@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "index": {
+      "routing_path": [
+        "name"
+      ],
+      "mode": "time_series"
+    }
+  }
+}
