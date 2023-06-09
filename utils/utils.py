@@ -4,7 +4,14 @@ import os.path
 from elasticsearch import Elasticsearch
 from elasticsearch.client import IngestClient
 
+# The TSDB index
+tsdb_index = "tsdb-index-enabled"
+# This is the index in which we will store the documents that were overwritten - ie, the ones that caused us
+# to lose data
+overwritten_docs_index = "tsdb-overwritten-docs"
 
+
+# Create ElasticSearch client
 def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd):
     return Elasticsearch(
         hosts=elasticsearch_host,
@@ -13,6 +20,7 @@ def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, el
     )
 
 
+# Get the content of JSON file
 def get_file_content(file_name: str):
     if file_name != "" and not os.path.exists(file_name):
         print("\tFile", file_name, "for index mappings/settings does not exist. Program will end.")
@@ -26,44 +34,27 @@ def get_file_content(file_name: str):
     return content
 
 
-# Create index name @index_name, with the mappings from the file @file_mappings and settings from @file_settings.
-def create_index(client: Elasticsearch, index_name: str, file_mappings: str = "", file_settings: str = ""):
-    print("Creating index {}...".format(index_name))
-    if client.indices.exists(index=index_name):
-        print("\tIndex", index_name, "exists and will be deleted.")
-        client.indices.delete(index=index_name)
-
-    content_mappings = get_file_content(file_mappings)
-    content_settings = get_file_content(file_settings)
-
-    if "mappings" in content_mappings:
-        mappings = content_mappings["mappings"]
-    else:
-        print("\tNo mappings were defined for index {name}. Default mappings will be used.".format(name=index_name))
-        mappings = {}
-
-    if "settings" in content_settings:
-        settings = content_settings["settings"]
-        settings["index"].pop("provided_name", None)
-        settings["index"].pop("uuid", None)
-        settings["index"].pop("creation_date", None)
+# Some settings cause an error as they are not known to ElasticSearch Python client.
+# This function discards the ones that were causing me error (there might be more!).
+def discard_unknown_settings(content_settings: []):
+    settings = content_settings["settings"]
+    settings["index"].pop("provided_name", None)
+    settings["index"].pop("uuid", None)
+    settings["index"].pop("creation_date", None)
+    if "version" in settings["index"]:
         settings["index"]["version"].pop("created", None)
-    else:
-        print("\tNo settings were defined for index {name}. Default settings will be used.".format(name=index_name))
-        settings = {}
-
-    client.indices.create(index=index_name, mappings=mappings, settings=settings)
-    print("Index {name} successfully created.\n".format(name=index_name))
+    return settings
 
 
+# Given a JSON file, add the document to the index
 def add_doc_from_file(client: Elasticsearch, index_name: str, doc_path: str):
     file = open(doc_path)
     content = json.load(file)
     file.close()
     client.index(index=index_name, document=content)
-    # print("\t Document {} was added to index {}.".format(os.path.basename(doc_path), index_name))
 
 
+# Place all documents from a folder @folder_docs to the index @index_name
 def place_documents(client: Elasticsearch, index_name: str, folder_docs: str):
     print("Placing documents on the index {name}...".format(name=index_name))
     if not client.indices.exists(index=index_name):
@@ -88,32 +79,18 @@ def place_documents(client: Elasticsearch, index_name: str, folder_docs: str):
     print("Successfully placed {} documents on the index {name}.\n".format(n_docs, name=index_name))
 
 
-def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str):
-    print("Copying documents from {} to {}...".format(source_index, dest_index))
-    if not client.indices.exists(index=source_index):
-        print("Source index {name} does not exist. Program will end.".format(name=source_index))
-        exit(0)
-    if not client.indices.exists(index=dest_index):
-        print("Destination index {name} does not exist. Program will end.".format(name=dest_index))
-        exit(0)
-
-    resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True)
-    if resp["updated"] > 0:
-        print("WARNING: Out of {} documents from the index {}, {} of them was/were discarded.\n".format(resp["total"],
-                                                                                                        source_index,
-                                                                                                        resp[
-                                                                                                            "updated"]))
-        return False
-    else:
-        print(
-            "All {} documents from index {} were successfully placed to index {}.\n".format(resp["total"], source_index,
-                                                                                            dest_index))
-        return True
+def create_index(client: Elasticsearch, index_name: str, mappings: {} = {}, settings: {} = {}):
+    print("Creating index {}...".format(index_name))
+    if client.indices.exists(index=index_name):
+        print("\tIndex", index_name, "exists and will be deleted.")
+        client.indices.delete(index=index_name)
+    client.indices.create(index=index_name, mappings=mappings, settings=settings)
+    print("Index {name} successfully created.\n".format(name=index_name))
 
 
-def create_index_missing_for_docs(client: Elasticsearch, tsdb_index: str, overwritten_docs_index: str):
+# Create an index @overwritten_docs_index to store all the documents that were overwritten on index @tsdb_index
+def create_index_missing_for_docs(client: Elasticsearch):
     create_index(client, overwritten_docs_index)
-
     pipelines = IngestClient(client)
     pipeline_name = 'get-missing-docs'
     pipelines.put_pipeline(id=pipeline_name, body={
@@ -126,25 +103,19 @@ def create_index_missing_for_docs(client: Elasticsearch, tsdb_index: str, overwr
             }
         ]
     })
-
     dest = {
         "index": overwritten_docs_index,
         "version_type": "external",
         "pipeline": pipeline_name
     }
-
     client.reindex(source={"index": tsdb_index}, dest=dest, refresh=True)
 
 
-def get_missing_docs_info(client: Elasticsearch, index_name: str, dimensions: [], max_docs: int = 10):
-    body = {
-        'size': max_docs,
-        'query': {
-            'match_all': {}
-        }
-    }
+def get_missing_docs_info(client: Elasticsearch, max_docs: int = 10):
+    body = {'size': max_docs, 'query': {'match_all': {}}}
+    res = client.search(index=overwritten_docs_index, body=body)
+    dimensions = get_dimensions(client)
 
-    res = client.search(index=index_name, body=body)
     print("The timestamp and dimensions of the first {} overwritten documents are:".format(max_docs))
     for doc in res["hits"]["hits"]:
         print("- Timestamp {}:".format(doc["_source"]["@timestamp"]))
@@ -158,35 +129,147 @@ def get_missing_docs_info(client: Elasticsearch, index_name: str, dimensions: []
                 el = el[key]
             print("\t{} = {}".format(dimension, el))
 
-        #for dimension in dimensions:
-        #    print("\t{} = {}".format(dimension, doc["_source"][dimension]))
 
-
-def get_dimensions(client: Elasticsearch, tsdb_index: str):
+def get_dimensions(client: Elasticsearch):
     settings = client.indices.get_settings(index=tsdb_index)
     if "routing_path" in settings[tsdb_index]['settings']['index']:
         dimensions = settings[tsdb_index]['settings']['index']['routing_path']
-        print("Dimensions of the index {} are {}.".format(tsdb_index, dimensions))
         return dimensions
     else:
         print("Dimensions are not defined for index {}. Program will end.".format(tsdb_index))
         exit(0)
 
 
-def copy_index(client: Elasticsearch, original_index: str, copy_index: str, max_docs: int = 3000):
-    if not client.indices.exists(index=original_index):
-        print("\tIndex", original_index, "does not exist. Program will end.")
+# Append some entry to an object. Needed to add the index mode to the index settings.
+def add_entry_to_json(template: {}, settings: {}):
+    for key in settings:
+        if key in template:
+            if len(settings) == 1:
+                template[key] = settings[key]
+            else:
+                add_entry_to_json(template[key], settings[key])
+        else:
+            template[key] = settings[key]
+
+
+def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str, max_docs: int):
+    print("Copying documents from {} to {}...".format(source_index, dest_index))
+    if not client.indices.exists(index=source_index):
+        print("Source index {name} does not exist. Program will end.".format(name=source_index))
         exit(0)
 
-    print("Creating index {}...".format(copy_index))
-    if client.indices.exists(index=copy_index):
-        print("\tIndex", copy_index, "exists and will be deleted.")
-        client.indices.delete(index=copy_index)
+    resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True, max_docs=max_docs)
+    if resp["updated"] > 0:
+        print("WARNING: Out of {} documents from the index {}, {} of them was/were discarded.\n".format(resp["total"],
+                                                                                                        source_index,
+                                                                                                        resp[
+                                                                                                            "updated"]))
+        return False
+    else:
+        print(
+            "All {} documents taken from index {} were successfully placed to index {}.\n".format(resp["total"],
+                                                                                                  source_index,
+                                                                                                  dest_index))
+        return True
 
-    content = client.indices.get_mapping(index=original_index)
-    mappings = content[original_index]["mappings"]
-    client.indices.create(index=copy_index, mappings=mappings)
-    print("Index {name} successfully created.".format(name=copy_index))
 
-    resp = client.reindex(source={"index": original_index}, dest={"index": copy_index}, refresh=True, max_docs=max_docs)
-    print("Copied {} documents to index {name}.\n".format(resp["created"], name=copy_index))
+# Given a data stream, we copy the mappings and settings and modify them for the TSDB index.
+def get_tsdb_config(client: Elasticsearch, data_stream_name: str):
+    tsdb_config_index = "do-not-use"
+    clone_template = "clone-template"
+
+    if client.indices.exists(index=tsdb_config_index):
+        client.indices.delete_data_stream(tsdb_config_index)
+
+    data_stream = client.indices.get_data_stream(name=data_stream_name)
+
+    # Get the index from the data stream. We need it to get the settings and mappings.
+    index_name = data_stream["data_streams"][0]["indices"][0]["index_name"]
+    print("\tThe index {} will be used as the standard index.".format(index_name))
+    mappings = client.indices.get_mapping(index=index_name)[index_name]
+    settings = client.indices.get_settings(index=index_name)[index_name]
+    # Some settings cause an error on the ES client. This function removes them.
+    discard_unknown_settings(settings)
+    # Add the time_series mode
+    settings["settings"]["index"] |= {"mode": "time_series"}
+
+    # Create a new index template, similar to the standard index template but with TSDB enable
+    if client.indices.exists_index_template(name=clone_template):
+        client.indices.delete_index_template(name=clone_template)
+    client.indices.put_index_template(name=clone_template,
+                                      index_patterns=[tsdb_config_index],
+                                      data_stream={"allow_custom_routing": "false"},
+                                      template=mappings | settings)
+
+    # Create a data stream do obtain the full mappings and settings of the TSDB index.
+    # We need this workaround to get the routing_path (ie, the list of our dimensions)
+    # since the template cannot determine the value of this field.
+    client.indices.create_data_stream(name=tsdb_config_index)
+    mappings = client.indices.get_mapping(index=tsdb_config_index)
+    settings = client.indices.get_settings(index=tsdb_config_index)
+    for key in mappings:
+        mappings = mappings[key]["mappings"]
+        settings = discard_unknown_settings(settings[key])
+        break
+
+    # We change the TSDB time window, just so we don't run into errors.
+    time_series = {
+        "time_series": {
+            "end_time": "2100-06-08T14:41:54.000Z",
+            "start_time": "1900-06-08T09:54:18.000Z"
+        }
+    }
+    settings["index"] |= time_series
+    add_entry_to_json(settings, time_series)
+
+    # Now that we have the settings and mappings for the TSDB index, we delete the data stream.
+    # We won't use our newly created index (and after this line deleted) because it causes
+    # problems with conflicts and with reindex.
+    client.indices.delete_data_stream(name=tsdb_config_index)
+
+    return index_name, mappings, settings
+
+
+def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, max_docs: int = 5000):
+    print("Using data stream {} to create new TSDB index {}...".format(data_stream_name, tsdb_index))
+
+    if not client.indices.exists(index=data_stream_name):
+        print("\tData stream {} does not exist. Program will end.".format(data_stream_name))
+        exit(0)
+
+    # Get the name of the index with the documents, and the mappings and settings for the new TSDB index
+    source_index, mappings, settings = get_tsdb_config(client, data_stream_name)
+
+    # Create the TSDB index
+    create_index(client, tsdb_index, mappings, settings)
+
+    # Copy the documents from one index to the other
+    return copy_docs_from_to(client, source_index, tsdb_index, max_docs)
+
+
+# A new index template @index_template_name based on the configuration from the file @index_template_path
+# will be created. After that, the data_stream @data_stream_name with the same index pattern is created.
+def prepare_set_up(client: Elasticsearch, data_stream_name: str, index_template_name: str, index_template_path: str):
+    print("Preparing the setup...")
+
+    print("\tPreparing index template {} from file {}...".format(index_template_name, index_template_path))
+    if client.indices.exists_index_template(name=index_template_name):
+        print("\t\tIndex template", index_template_name, "exists and will be deleted, along with all its data streams.")
+        info = client.indices.get_index_template(name=index_template_name)
+        data_streams = info["index_templates"][0]["index_template"]["index_patterns"]
+        for data_stream in data_streams:
+            client.indices.delete_data_stream(name=data_stream, expand_wildcards="all")
+        client.indices.delete_index_template(name=index_template_name)
+
+    print("\tPreparing data stream {}...".format(data_stream_name))
+    if client.indices.exists(index=data_stream_name):
+        print("\t\tIndices from data stream ", data_stream_name, "exist and will be deleted.")
+        client.indices.delete_data_stream(name=data_stream_name, expand_wildcards="all")
+
+    content = get_file_content(index_template_path)
+    client.indices.put_index_template(name=index_template_name, body=content)
+    print("\tIndex template", index_template_name, "successfully created.")
+
+    client.indices.create_data_stream(name=data_stream_name)
+    print("\tData stream", data_stream_name, "successfully created.")
+    print("Ready to start.\n")
