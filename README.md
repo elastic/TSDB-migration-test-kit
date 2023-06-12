@@ -30,4 +30,4 @@ The program should be ready to run after.
 
 ## Example
 
-Refer to ...
+Refer to [sample](sample/README.md).
