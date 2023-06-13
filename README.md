@@ -1,17 +1,17 @@
 This repository contains the code to a new approach for testing
-TSDB migration. In [Why is this important](##Why-is-this-important) you
+TSDB migration. In [Why is this important](#Why-is-this-important) you
 get a better overview of what this is and why it is necessary.
 
 # Table of Contents
-1. [Installation](##Installation)
-2. [Requirements](##Requirements)
-3. [Set up](##Set-up)
-4. [Why is this important](##Why-is-this-important)
-5. [Understanding the program](##Understanding-the-program)
-6. [Algorithm in detail](##Algorithm-in-detail)
-7. [Realistic output example](##Realistic-output-example)
-8. [Test cases covered](##Test-cases-covered)
-9. [Cons of this approach (and why they are not important)](##Cons-of-this-approach-(and-why-they-are-not-important))
+1. [Installation](#Installation)
+2. [Requirements](#Requirements)
+3. [Set up](#Set-up)
+4. [Why is this important](#Why-is-this-important)
+5. [Understanding the program](#Understanding-the-program)
+6. [Algorithm in detail](#Algorithm-in-detail)
+7. [Realistic output example](#Realistic-output-example)
+8. [Test cases covered](#Test-cases-covered)
+9. [Cons of this approach (and why they are not important)](#Cons-of-this-approach-(and-why-they-are-not-important))
 
 ## Installation
 
@@ -266,7 +266,7 @@ The testing checks we need to do now can be resumed in just two points:
 - [ ] Check the dashboard works as expected for both modes.
 
 This approach covers well the first case, but checking the dashboards is still
-a process that needs to be done manually (see next section why I think this
+a process that needs to be done manually (see next section on why I think this
 is not an obstacle to adopt this approach).
 
 
