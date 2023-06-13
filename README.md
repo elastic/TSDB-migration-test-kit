@@ -58,6 +58,7 @@ and the index number for the index you want to use for the settings and mappings
    ```
   
    Confused by this? Imagine a data stream with two indexes:
+
    ![img_2.png](img_2.png)
 
    By default, the first index of the data stream is always used as the one
