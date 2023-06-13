@@ -5,8 +5,8 @@ get a better overview of what this is and why it is necessary.
 # Table of Contents
 1. [Installation](##Installation)
 2. [Requirements](##Requirements)
-3. [Set up](##Set up)
-4. [Why is this important](##Why is this important)
+3. [Set up](##Set-up)
+4. [Why is this important](##Why-is-this-important)
 5. [Understanding the program](##Understanding the program)
 6. [Algorithm in detail](##Algorithm in detail)
 7. [Realistic output example](##Realistic output example)
@@ -73,7 +73,7 @@ please refer to the [sample](sample/README.md) to understand the basics of it.
 ## Algorithm in detail
 
 > **Note**: The overview of the algorithm can be found in [sample](sample/README.md). This section
-> will be go in more depth in what is actually is happening. Please, make sure you
+> will be go in more depth of what is actually is happening. Please, make sure you
 > understand the sample.
 
 The flow goes like this:
