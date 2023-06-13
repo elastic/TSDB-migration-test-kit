@@ -274,7 +274,8 @@ is not an obstacle to adopt this approach).
 
 1. We have no easy way to use the data from the index with TSDB disabled for
 the dashboards. We would have to go to each visualization and change the data view:
-![img_1.png](img_1.png)
+
+   ![img_1.png](img_1.png)
 
    Why not important: problems regarding the dashboards should all be fixed by now.
 If there are still aggregations being used in an incorrect way, that is a process
