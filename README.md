@@ -6,12 +6,13 @@ get a better overview of what this is and why it is necessary.
 1. [Installation](#Installation)
 2. [Requirements](#Requirements)
 3. [Set up](#Set-up)
-4. [Why is this important](#Why-is-this-important)
-5. [Understanding the program](#Understanding-the-program)
-6. [Algorithm in detail](#Algorithm-in-detail)
-7. [Realistic output example](#Realistic-output-example)
-8. [Test cases covered](#Test-cases-covered)
-9. [Cons of this approach (and why they are not important)](#Cons-of-this-approach-and-why-they-are-not-important)
+4. [Run](#Run)
+5. [Why is this important](#Why-is-this-important)
+6. [Understanding the program](#Understanding-the-program)
+7. [Algorithm in detail](#Algorithm-in-detail)
+8. [Realistic output example](#Realistic-output-example)
+9. [Test cases covered](#Test-cases-covered)
+10. [Cons of this approach (and why they are not important)](#Cons-of-this-approach-and-why-they-are-not-important)
 
 ## Installation
 
@@ -32,16 +33,46 @@ You need to set the variables in the `main.py` file:
 
 ```python
 # Variables to configure the ES client
+# Variables to configure the ES client:
 elasticsearch_host = "https://localhost:9200"
 elasticsearch_ca_path = "/home/c/.elastic-package/profiles/default/certs/elasticsearch/ca-cert.pem"
 elasticsearch_user = "elastic"
 elasticsearch_pwd = "changeme"
 
-# There NEEDS to be fields with time_series_dimension: true.
-data_stream = "metrics-docker.cpu-default"
+# If you are running on cloud, you should set these two. If they are not empty, then the client will connect
+# to the cloud using these variables, instead of the above ones.
+elastic_pwd = ""
+cloud_id = ""
 ```
 
-The program should be ready to run after.
+You can also change the defaults in the `main.py` for:
+- The number of documents you want to copy from the TSDB disabled index. Just add
+ the parameter `max_docs` to the `copy_from_data_stream` function, like this:
+   ```python
+   all_placed = copy_from_data_stream(client, data_stream, max_docs=5000)
+   ```
+- The index number from the data stream you want to use to retrieve the documents,
+and the index number for the index you want to use for the settings and mappings:
+   ```python
+   copy_from_data_stream(client, data_stream, docs_index=0,settings_index=1)
+   ```
+  
+   Confused by this? Imagine a data stream with two indexes:
+   ![img_2.png](img_2.png)
+
+   By default, the first index of the data stream is always used as the one
+   that has the documents. The last index is the default for the settings/mappings.
+   This way, if you changed the data stream to include one existent field as dimension,
+   you will not have to restart sending the documents, and can just use the data
+   that is already there.
+
+## Run
+
+After settings the values for all the variables, just run the python program:
+
+```python
+python main.py
+```
 
 ## Why is this important
 

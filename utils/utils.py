@@ -12,7 +12,14 @@ overwritten_docs_index = "tsdb-overwritten-docs"
 
 
 # Create ElasticSearch client
-def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd):
+def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd, cloud_id: str,
+               elastic_pwd: str):
+    if cloud_id != "" and elastic_pwd != "":
+        print("Client will connect to the cloud.\n")
+        return Elasticsearch(
+            cloud_id=cloud_id,
+            basic_auth=("elastic", elastic_pwd)
+        )
     return Elasticsearch(
         hosts=elasticsearch_host,
         ca_certs=elasticsearch_ca_path,
@@ -159,7 +166,8 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
         exit(0)
 
     if max_docs != -1:
-        resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True, max_docs=max_docs)
+        resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True,
+                              max_docs=max_docs)
     else:
         resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True)
     if resp["updated"] > 0:
@@ -177,7 +185,7 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
 
 
 # Given a data stream, we copy the mappings and settings and modify them for the TSDB index.
-def get_tsdb_config(client: Elasticsearch, data_stream_name: str):
+def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: int, settings_index: int):
     tsdb_config_index = "do-not-use"
     clone_template = "clone-template"
 
@@ -185,12 +193,34 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str):
         client.indices.delete_data_stream(tsdb_config_index)
 
     data_stream = client.indices.get_data_stream(name=data_stream_name)
+    n_indexes = len(data_stream["data_streams"][0]["indices"])
 
     # Get the index from the data stream. We need it to get the settings and mappings.
-    index_name = data_stream["data_streams"][0]["indices"][0]["index_name"]
-    print("\tThe index {} will be used as the standard index.".format(index_name))
-    mappings = client.indices.get_mapping(index=index_name)[index_name]
-    settings = client.indices.get_settings(index=index_name)[index_name]
+
+    if docs_index == -1:
+        docs_index = 0
+    else:
+        if docs_index >= n_indexes:
+            print("\tWARNING: Data stream {} has {} indexes. The document index used will be 0 "
+                  "instead of the given {}.".format(data_stream_name, n_indexes, docs_index))
+            docs_index = 0
+        else:
+            docs_index = 0
+
+    if settings_index == -1:
+        settings_index = n_indexes - 1
+    elif settings_index >= n_indexes:
+        print("\tWARNING: Data stream {} has {} indexes. The settings index used will be 0 "
+              "instead of the given {}.".format(data_stream_name, n_indexes, settings_index))
+        settings_index = n_indexes - 1
+
+    docs_index_name = data_stream["data_streams"][0]["indices"][docs_index]["index_name"]
+    settings_index_name = data_stream["data_streams"][0]["indices"][settings_index]["index_name"]
+
+    print("\tThe index {} will be used as the standard index for the mappings/settings.".format(settings_index_name))
+    mappings = client.indices.get_mapping(index=settings_index_name)[settings_index_name]
+    settings = client.indices.get_settings(index=settings_index_name)[settings_index_name]
+
     # Some settings cause an error on the ES client. This function removes them.
     discard_unknown_settings(settings)
     # Add the time_series mode
@@ -231,10 +261,11 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str):
     client.indices.delete_data_stream(name=tsdb_config_index)
     client.indices.delete_index_template(name=clone_template)
 
-    return index_name, mappings, settings
+    return docs_index_name, mappings, settings
 
 
-def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, max_docs: int = -1):
+def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, docs_index: int = -1,
+                          settings_index: int = -1, max_docs: int = -1):
     print("Using data stream {} to create new TSDB index {}...".format(data_stream_name, tsdb_index))
 
     if not client.indices.exists(index=data_stream_name):
@@ -242,7 +273,7 @@ def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, max_docs
         exit(0)
 
     # Get the name of the index with the documents, and the mappings and settings for the new TSDB index
-    source_index, mappings, settings = get_tsdb_config(client, data_stream_name)
+    source_index, mappings, settings = get_tsdb_config(client, data_stream_name, docs_index, settings_index)
 
     # Create the TSDB index
     create_index(client, tsdb_index, mappings, settings)
