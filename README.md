@@ -1,5 +1,5 @@
 This repository contains the code to a new approach for testing
-TSDB migration. In [Why is this important](##Why is this important) you
+TSDB migration. In [Why is this important](##Why-is-this-important) you
 get a better overview of what this is and why it is necessary.
 
 # Table of Contents
@@ -7,11 +7,11 @@ get a better overview of what this is and why it is necessary.
 2. [Requirements](##Requirements)
 3. [Set up](##Set-up)
 4. [Why is this important](##Why-is-this-important)
-5. [Understanding the program](##Understanding the program)
-6. [Algorithm in detail](##Algorithm in detail)
-7. [Realistic output example](##Realistic output example)
-8. [Test cases covered](##Test cases covered)
-9. [Cons of this approach (and why they are not important)](##Cons of this approach (and why they are not important))
+5. [Understanding the program](##Understanding-the-program)
+6. [Algorithm in detail](##Algorithm-in-detail)
+7. [Realistic output example](##Realistic-output-example)
+8. [Test cases covered](##Test-cases-covered)
+9. [Cons of this approach (and why they are not important)](##Cons-of-this-approach-(and-why-they-are-not-important))
 
 ## Installation
 
