@@ -1,4 +1,4 @@
-## Example explained
+## Example data
 
 There are three documents that will be used in this example:
 
@@ -22,6 +22,9 @@ and ended with just 1 overwritten document.**
 
 
 ## Algorithm
+
+This is just an overview of the algorithm. You can find the detailed one
+in [here](../README.md).
 
 ### Prepare the setup to test the example
 

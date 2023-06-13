@@ -14,14 +14,15 @@ elasticsearch_user = "elastic"
 elasticsearch_pwd = "changeme"
 
 # There NEEDS to be fields with time_series_dimension: true.
-data_stream = "metrics-docker.cpu-default"
-
+data_stream = "metrics-istio.istiod_metrics-default" #metrics-docker.cpu-default"
 
 if __name__ == '__main__':
     # Create the client instance
     client = get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd)
     print("You're testing with version {}.\n".format(client.info()["version"]["number"]))
 
+    ## Is running this function too slow? Please set the number of max documents as this:
+    ## all_placed = copy_from_data_stream(client, data_stream, max_docs=5000)
     all_placed = copy_from_data_stream(client, data_stream)
 
     if not all_placed:

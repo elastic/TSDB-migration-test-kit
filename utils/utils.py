@@ -158,7 +158,10 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
         print("Source index {name} does not exist. Program will end.".format(name=source_index))
         exit(0)
 
-    resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True, max_docs=max_docs)
+    if max_docs != -1:
+        resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True, max_docs=max_docs)
+    else:
+        resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True)
     if resp["updated"] > 0:
         print("WARNING: Out of {} documents from the index {}, {} of them was/were discarded.\n".format(resp["total"],
                                                                                                         source_index,
@@ -201,7 +204,7 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str):
                                       data_stream={"allow_custom_routing": "false"},
                                       template=mappings | settings)
 
-    # Create a data stream do obtain the full mappings and settings of the TSDB index.
+    # Create a data stream to obtain the full mappings and settings of the TSDB index.
     # We need this workaround to get the routing_path (ie, the list of our dimensions)
     # since the template cannot determine the value of this field.
     client.indices.create_data_stream(name=tsdb_config_index)
@@ -226,11 +229,12 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str):
     # We won't use our newly created index (and after this line deleted) because it causes
     # problems with conflicts and with reindex.
     client.indices.delete_data_stream(name=tsdb_config_index)
+    client.indices.delete_index_template(name=clone_template)
 
     return index_name, mappings, settings
 
 
-def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, max_docs: int = 5000):
+def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, max_docs: int = -1):
     print("Using data stream {} to create new TSDB index {}...".format(data_stream_name, tsdb_index))
 
     if not client.indices.exists(index=data_stream_name):
