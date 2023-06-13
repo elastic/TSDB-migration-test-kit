@@ -73,7 +73,7 @@ please refer to the [sample](sample/README.md) to understand the basics of it.
 ## Algorithm in detail
 
 > **Note**: The overview of the algorithm can be found in [sample](sample/README.md). This section
-> will be go in more depth of what is actually is happening. Please, make sure you
+> will go in more depth of what is actually is happening. Please, make sure you
 > understand the sample.
 
 The flow goes like this:
