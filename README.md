@@ -13,6 +13,8 @@ get a better overview of what this is and why it is necessary.
 8. [Realistic output example](#Realistic-output-example)
 9. [Test cases covered](#Test-cases-covered)
 10. [Cons of this approach (and why they are not important)](#Cons-of-this-approach-and-why-they-are-not-important)
+11. [Testing the dashboard](#Testing-the-dashboard)
+
 
 ## Installation
 
@@ -59,7 +61,7 @@ and the index number for the index you want to use for the settings and mappings
   
    Confused by this? Imagine a data stream with two indexes:
 
-   ![img_2.png](img_2.png)
+   ![img_2.png](images/img_2.png)
 
    By default, the first index of the data stream is always used as the one
    that has the documents. The last index is the default for the settings/mappings.
@@ -110,7 +112,7 @@ please refer to the [sample](sample/README.md) to understand the basics of it.
 
 The flow goes like this:
 
-![img.png](img.png)
+![img.png](images/img.png)
 
 
 1. First, we need the data stream with TSDB **disabled**. Even though this data stream has TSDB disabled,
@@ -150,13 +152,13 @@ In case TSDB migration was successful, ie, no loss of data occurred.
 You're testing with version 8.8.0-SNAPSHOT.
 
 Using data stream metrics-istio.istiod_metrics-default to create new TSDB index tsdb-index-enabled...
-	The index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 will be used as the standard index.
+	The index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 will be used as the standard index for the mappings/settings.
 Creating index tsdb-index-enabled...
 	Index tsdb-index-enabled exists and will be deleted.
 Index tsdb-index-enabled successfully created.
 
 Copying documents from .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 to tsdb-index-enabled...
-All 5000 documents taken from index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 were successfully placed to index tsdb-index-enabled.
+All 10000 documents taken from index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 were successfully placed to index tsdb-index-enabled.
 ```
 </details>
 
@@ -169,13 +171,13 @@ In case TSDB migration was not successful.
 You're testing with version 8.8.0-SNAPSHOT.
 
 Using data stream metrics-istio.istiod_metrics-default to create new TSDB index tsdb-index-enabled...
-	The index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 will be used as the standard index.
+	The index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 will be used as the standard index for the mappings/settings.
 Creating index tsdb-index-enabled...
 	Index tsdb-index-enabled exists and will be deleted.
 Index tsdb-index-enabled successfully created.
 
 Copying documents from .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 to tsdb-index-enabled...
-WARNING: Out of 38829 documents from the index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001, 3242 of them was/were discarded.
+WARNING: Out of 38829 documents from the index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001, 3242 of them were discarded.
 
 Index for the overwritten documents will be created...
 Creating index tsdb-overwritten-docs...
@@ -184,105 +186,105 @@ Index tsdb-overwritten-docs successfully created.
 
 The timestamp and dimensions of the first 10 overwritten documents are:
 - Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
 	cloud.provider = (Missing value)
-	service.address = (Missing value)
-	host.name = kind-control-plane
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
 	istio.istiod.labels_id = /nvav668p0/1SUGKpp/iqPGeBvQ=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
-- Timestamp 2023-06-13T07:22:42.800Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.provider = (Missing value)
-	service.address = (Missing value)
 	host.name = kind-control-plane
-	istio.istiod.labels_id = /nvav668p0/1SUGKpp/iqPGeBvQ=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
+	service.address = (Missing value)
 - Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
 	cloud.provider = (Missing value)
-	service.address = (Missing value)
-	host.name = kind-control-plane
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
 	istio.istiod.labels_id = 0sgWJXQUzSyPqp+dUA14QEXdSUU=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
-- Timestamp 2023-06-13T07:22:42.800Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.provider = (Missing value)
-	service.address = (Missing value)
 	host.name = kind-control-plane
-	istio.istiod.labels_id = 0sgWJXQUzSyPqp+dUA14QEXdSUU=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
+	service.address = (Missing value)
 - Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
 	cloud.provider = (Missing value)
-	service.address = (Missing value)
-	host.name = kind-control-plane
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
 	istio.istiod.labels_id = 223lD4Lr2QfSW+uxD8GSnuPFj6w=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
-- Timestamp 2023-06-13T07:22:42.800Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.provider = (Missing value)
-	service.address = (Missing value)
 	host.name = kind-control-plane
-	istio.istiod.labels_id = 223lD4Lr2QfSW+uxD8GSnuPFj6w=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
+	service.address = (Missing value)
 - Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
 	cloud.provider = (Missing value)
-	service.address = (Missing value)
-	host.name = kind-control-plane
-	istio.istiod.labels_id = 35M5nmhaXoUHJb/68k4pxv4qq4w=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
-- Timestamp 2023-06-13T07:22:42.800Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
 	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.provider = (Missing value)
-	service.address = (Missing value)
-	host.name = kind-control-plane
-	istio.istiod.labels_id = 35M5nmhaXoUHJb/68k4pxv4qq4w=
-	cloud.availability_zone = (Missing value)
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
 	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
+	istio.istiod.labels_id = 35M5nmhaXoUHJb/68k4pxv4qq4w=
+	host.name = kind-control-plane
+	service.address = (Missing value)
 - Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
 	cloud.provider = (Missing value)
-	service.address = (Missing value)
-	host.name = kind-control-plane
-	istio.istiod.labels_id = 4b92gpIKHf9qEv5gUdt/C7ZYe78=
-	cloud.availability_zone = (Missing value)
-	cloud.region = (Missing value)
-- Timestamp 2023-06-13T07:22:42.800Z:
-	cloud.instance.id = (Missing value)
-	cloud.account.id = (Missing value)
 	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.provider = (Missing value)
-	service.address = (Missing value)
-	host.name = kind-control-plane
-	istio.istiod.labels_id = 4b92gpIKHf9qEv5gUdt/C7ZYe78=
-	cloud.availability_zone = (Missing value)
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
 	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
+	istio.istiod.labels_id = 4b92gpIKHf9qEv5gUdt/C7ZYe78=
+	host.name = kind-control-plane
+	service.address = (Missing value)
+- Timestamp 2023-06-13T07:25:32.802Z:
+	cloud.provider = (Missing value)
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
+	istio.istiod.labels_id = 7rif8Jq/O64SW4wDoSfy1gTwv6U=
+	host.name = kind-control-plane
+	service.address = (Missing value)
+- Timestamp 2023-06-13T07:25:32.802Z:
+	cloud.provider = (Missing value)
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
+	istio.istiod.labels_id = 8V1pJlwf4KnnzZBNL1i+3Agfi80=
+	host.name = kind-control-plane
+	service.address = (Missing value)
+- Timestamp 2023-06-13T07:25:32.802Z:
+	cloud.provider = (Missing value)
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
+	istio.istiod.labels_id = DWYCyptzUkLlISo7yXDriLaixDU=
+	host.name = kind-control-plane
+	service.address = (Missing value)
+- Timestamp 2023-06-13T07:25:32.802Z:
+	cloud.provider = (Missing value)
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
+	istio.istiod.labels_id = GghR0I4GpX0AaGu+Z6SCbMRqLT8=
+	host.name = kind-control-plane
+	service.address = (Missing value)
+- Timestamp 2023-06-13T07:25:32.802Z:
+	cloud.provider = (Missing value)
+	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
+	cloud.account.id = (Missing value)
+	cloud.instance.id = (Missing value)
+	cloud.region = (Missing value)
+	cloud.availability_zone = (Missing value)
+	istio.istiod.labels_id = HgK9dgqHAUNJd1JSA+cAR79vhRE=
+	host.name = kind-control-plane
+	service.address = (Missing value)
 ```
 
 </details>
@@ -305,11 +307,9 @@ is not an obstacle to adopt this approach).
 ## Cons of this approach (and why they are not important)
 
 1. We have no easy way to use the data from the index with TSDB disabled for
-the dashboards. We would have to go to each visualization and change the data view:
-
-   ![img_1.png](img_1.png)
-
-   Why not important: problems regarding the dashboards should all be fixed by now.
+the dashboards. We would have to go to each visualization and change the data view
+(more on this on the next section).
+Why not important: problems regarding the dashboards should all be fixed by now.
 If there are still aggregations being used in an incorrect way, that is a process
 that will have to be done manually, regarding of TSDB being enabled or not. Otherwise,
 fixing the dashboards automatically is a totally different (and needed!) problem
@@ -321,3 +321,25 @@ passed the migrations. I chose to do this because disabling TSDB and checking
 that we did not lose any data is a general problem and not something related
 to an integration. And just like the dashboards, all problems related to this
 should be fixed by now.
+
+
+## Testing the dashboard
+
+Are you sure you want to test a dashboard?...
+
+Unfortunately, there is no automation for a dashboard.
+You have a tiring and repetitive process in front of you:
+
+1. Create a data view for the TSDB index:
+
+  ![img.png](images/img_3.png)
+
+> **Note**: The TSDB index will be deleted and recreated every time you
+> run the program. It is also a hidden index, in case you are having
+> trouble finding it.
+
+
+2. Go to the dashboard you wish to text, and for every visualization
+change the data view to the one you just created:
+
+   ![img.png](images/img_1.png)

@@ -171,7 +171,7 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
     else:
         resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True)
     if resp["updated"] > 0:
-        print("WARNING: Out of {} documents from the index {}, {} of them was/were discarded.\n".format(resp["total"],
+        print("WARNING: Out of {} documents from the index {}, {} of them were discarded.\n".format(resp["total"],
                                                                                                         source_index,
                                                                                                         resp[
                                                                                                             "updated"]))
