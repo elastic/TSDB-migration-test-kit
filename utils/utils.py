@@ -172,9 +172,9 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
         resp = client.reindex(source={"index": source_index}, dest={"index": dest_index}, refresh=True)
     if resp["updated"] > 0:
         print("WARNING: Out of {} documents from the index {}, {} of them were discarded.\n".format(resp["total"],
-                                                                                                        source_index,
-                                                                                                        resp[
-                                                                                                            "updated"]))
+                                                                                                    source_index,
+                                                                                                    resp[
+                                                                                                        "updated"]))
         return False
     else:
         print(
@@ -199,13 +199,10 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
 
     if docs_index == -1:
         docs_index = 0
-    else:
-        if docs_index >= n_indexes:
-            print("\tWARNING: Data stream {} has {} indexes. The document index used will be 0 "
-                  "instead of the given {}.".format(data_stream_name, n_indexes, docs_index))
-            docs_index = 0
-        else:
-            docs_index = 0
+    elif docs_index >= n_indexes:
+        print("\tWARNING: Data stream {} has {} indexes. The document index used will be 0 "
+              "instead of the given {}.".format(data_stream_name, n_indexes, docs_index))
+        docs_index = 0
 
     if settings_index == -1:
         settings_index = n_indexes - 1
