@@ -1,6 +1,7 @@
 import json
 import os.path
 
+import elasticsearch
 from elasticsearch import Elasticsearch
 from elasticsearch.client import IngestClient
 
@@ -207,9 +208,9 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
     if settings_index == -1:
         settings_index = n_indexes - 1
     elif settings_index >= n_indexes:
-        print("\tWARNING: Data stream {} has {} indexes. The settings index used will be 0 "
-              "instead of the given {}.".format(data_stream_name, n_indexes, settings_index))
         settings_index = n_indexes - 1
+        print("\tWARNING: Data stream {} has {} indexes. The settings index used will be {} "
+              "instead of the given {}.".format(data_stream_name, n_indexes, settings_index, settings_index + 1))
 
     docs_index_name = data_stream["data_streams"][0]["indices"][docs_index]["index_name"]
     settings_index_name = data_stream["data_streams"][0]["indices"][settings_index]["index_name"]
@@ -226,10 +227,16 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
     # Create a new index template, similar to the standard index template but with TSDB enable
     if client.indices.exists_index_template(name=clone_template):
         client.indices.delete_index_template(name=clone_template)
-    client.indices.put_index_template(name=clone_template,
-                                      index_patterns=[tsdb_config_index],
-                                      data_stream={"allow_custom_routing": "false"},
-                                      template=mappings | settings)
+    try:
+        client.indices.put_index_template(name=clone_template,
+                                          index_patterns=[tsdb_config_index],
+                                          data_stream={"allow_custom_routing": "false"},
+                                          template=mappings | settings)
+    except elasticsearch.BadRequestError as err:
+        print("\nERROR: Cannot create index template based on TSDB settings.")
+        print("Reason: ", err.body["error"]["caused_by"]["caused_by"]["reason"])
+        print("Program will end.")
+        exit(0)
 
     # Create a data stream to obtain the full mappings and settings of the TSDB index.
     # We need this workaround to get the routing_path (ie, the list of our dimensions)
