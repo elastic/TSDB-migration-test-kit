@@ -10,11 +10,18 @@ tsdb_index = "tsdb-index-enabled"
 # This is the index in which we will store the documents that were overwritten - ie, the ones that caused us
 # to lose data
 overwritten_docs_index = "tsdb-overwritten-docs"
+# A dictionary where we store the values for the time series fields
+time_series_fields = {
+    "dimension": [],
+    "counter": [],
+    "gauge": [],
+    "routing_path": []
+}
 
 
 # Create ElasticSearch client
-def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd, cloud_id: str,
-               elastic_pwd: str):
+def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd, cloud_id = "",
+               elastic_pwd = ""):
     if cloud_id != "" and elastic_pwd != "":
         print("Client will connect to the cloud.\n")
         return Elasticsearch(
@@ -122,7 +129,7 @@ def create_index_missing_for_docs(client: Elasticsearch):
 def get_missing_docs_info(client: Elasticsearch, max_docs: int = 10):
     body = {'size': max_docs, 'query': {'match_all': {}}}
     res = client.search(index=overwritten_docs_index, body=body)
-    dimensions = get_dimensions(client)
+    dimensions = time_series_fields["dimension"]
 
     print("The timestamp and dimensions of the first {} overwritten documents are:".format(max_docs))
     for doc in res["hits"]["hits"]:
@@ -138,26 +145,49 @@ def get_missing_docs_info(client: Elasticsearch, max_docs: int = 10):
             print("\t{} = {}".format(dimension, el))
 
 
-def get_dimensions(client: Elasticsearch):
-    settings = client.indices.get_settings(index=tsdb_index)
-    if "routing_path" in settings[tsdb_index]['settings']['index']:
-        dimensions = settings[tsdb_index]['settings']['index']['routing_path']
-        return dimensions
-    else:
-        print("Dimensions are not defined for index {}. Program will end.".format(tsdb_index))
-        exit(0)
+def get_time_series_fields(client: Elasticsearch, index_name: str):
+    fields = client.indices.get_mapping(index=index_name)[index_name]["mappings"]["properties"]
 
+    # A function to flatten the name of the fields
+    def get_all_fields(fields: {}, common: str, result: {}, degree: int = 0):
+        def join_strings(str1: str, str2: str):
+            if str1 == "":
+                return str2
+            return str1 + "." + str2
 
-# Append some entry to an object. Needed to add the index mode to the index settings.
-def add_entry_to_json(template: {}, settings: {}):
-    for key in settings:
-        if key in template:
-            if len(settings) == 1:
-                template[key] = settings[key]
+        for key in fields:
+            if "properties" in fields[key]:
+                get_all_fields(fields[key]["properties"], join_strings(common, key), result, degree + 1)
             else:
-                add_entry_to_json(template[key], settings[key])
-        else:
-            template[key] = settings[key]
+                all_keys = common.split(".")
+                previous = all_keys[-degree:] if degree > 0 else []
+                previous = ".".join(previous)
+                new_key = join_strings(previous, key)
+                result[new_key] = fields[key]
+
+    result = {}
+    get_all_fields(fields, "", result)
+
+    # Split the time series fields according to metric / dimension
+    def cluster_fields_by_type(fields: {}):
+        for field in fields:
+            if "time_series_dimension" in fields[field] and fields[field]["time_series_dimension"]:
+                time_series_fields["dimension"].append(field)
+                if fields[field]["type"] == "keyword":
+                    time_series_fields["routing_path"].append(field)
+            if "time_series_metric" in fields[field]:
+                metric = fields[field]["time_series_metric"]
+                time_series_fields[metric].append(field)
+
+    cluster_fields_by_type(result)
+
+    print("\tThe time series fields for the TSDB index are: ")
+    for key in time_series_fields:
+        if len(time_series_fields[key]) > 0:
+            print("\t\t- {}:".format(key))
+            for value in time_series_fields[key]:
+                print("\t\t\t- {}".format(value))
+    print()
 
 
 def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str, max_docs: int):
@@ -187,17 +217,10 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
 
 # Given a data stream, we copy the mappings and settings and modify them for the TSDB index.
 def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: int, settings_index: int):
-    tsdb_config_index = "do-not-use"
-    clone_template = "clone-template"
-
-    if client.indices.exists(index=tsdb_config_index):
-        client.indices.delete_data_stream(tsdb_config_index)
-
     data_stream = client.indices.get_data_stream(name=data_stream_name)
     n_indexes = len(data_stream["data_streams"][0]["indices"])
 
-    # Get the index from the data stream. We need it to get the settings and mappings.
-
+    # Get the index to use for document retrieval
     if docs_index == -1:
         docs_index = 0
     elif docs_index >= n_indexes:
@@ -205,6 +228,7 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
               "instead of the given {}.".format(data_stream_name, n_indexes, docs_index))
         docs_index = 0
 
+    # Get index to use for settings/mappings
     if settings_index == -1:
         settings_index = n_indexes - 1
     elif settings_index >= n_indexes:
@@ -222,34 +246,15 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
     # Some settings cause an error on the ES client. This function removes them.
     discard_unknown_settings(settings)
     # Add the time_series mode
-    settings["settings"]["index"] |= {"mode": "time_series"}
+    settings = settings["settings"]
+    settings["index"] |= {"mode": "time_series"}
 
-    # Create a new index template, similar to the standard index template but with TSDB enable
-    if client.indices.exists_index_template(name=clone_template):
-        client.indices.delete_index_template(name=clone_template)
-    try:
-        client.indices.put_index_template(name=clone_template,
-                                          index_patterns=[tsdb_config_index],
-                                          data_stream={"allow_custom_routing": "false"},
-                                          template=mappings | settings)
-    except elasticsearch.BadRequestError as err:
-        print("\nERROR: Cannot create index template based on TSDB settings.")
-        print("Reason: ", err.body["error"]["caused_by"]["caused_by"]["reason"])
-        print("Program will end.")
-        exit(0)
+    # Get all time series fields
+    get_time_series_fields(client, settings_index_name)
+    if len(time_series_fields["routing_path"]) == 0:
+        print("Routing path is empty. Program will end.")
 
-    # Create a data stream to obtain the full mappings and settings of the TSDB index.
-    # We need this workaround to get the routing_path (ie, the list of our dimensions)
-    # since the template cannot determine the value of this field.
-    client.indices.create_data_stream(name=tsdb_config_index)
-    mappings = client.indices.get_mapping(index=tsdb_config_index)
-    settings = client.indices.get_settings(index=tsdb_config_index)
-    for key in mappings:
-        mappings = mappings[key]["mappings"]
-        settings = discard_unknown_settings(settings[key])
-        break
-
-    # We change the TSDB time window, just so we don't run into errors.
+    # Set a new window to avoid time series end / start time errors
     time_series = {
         "time_series": {
             "end_time": "2100-06-08T14:41:54.000Z",
@@ -257,15 +262,9 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
         }
     }
     settings["index"] |= time_series
-    add_entry_to_json(settings, time_series)
+    settings["index"] |= {"routing_path": time_series_fields["routing_path"]}
 
-    # Now that we have the settings and mappings for the TSDB index, we delete the data stream.
-    # We won't use our newly created index (and after this line deleted) because it causes
-    # problems with conflicts and with reindex.
-    client.indices.delete_data_stream(name=tsdb_config_index)
-    client.indices.delete_index_template(name=clone_template)
-
-    return docs_index_name, mappings, settings
+    return docs_index_name, mappings["mappings"], settings
 
 
 def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, docs_index: int = -1,

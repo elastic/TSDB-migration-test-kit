@@ -20,7 +20,7 @@ elastic_pwd = ""
 cloud_id = ""
 
 # There NEEDS to be fields with time_series_dimension: true.
-data_stream = "metrics-istio.istiod_metrics-default"  # metrics-docker.cpu-default"
+data_stream = "metrics-elasticsearch.stack_monitoring.index_recovery-default"
 
 if __name__ == '__main__':
     # Create the client instance

@@ -100,46 +100,7 @@ After that, the program will tell the tester if the dimensions set are enough or
 
 ## Understanding the program
 
-Before reading anything else from this page,
-please refer to the [sample](sample/README.md) to understand the basics of it.
-
-
-## Algorithm in detail
-
-> **Note**: The overview of the algorithm can be found in [sample](sample/README.md). This section
-> will go in more depth of what is actually is happening. Please, make sure you
-> understand the sample.
-
-The flow goes like this:
-
-![img.png](images/img.png)
-
-
-1. First, we need the data stream with TSDB **disabled**. Even though this data stream has TSDB disabled,
-**it is necessary that dimensions are set**.
-2. After that, we need the settings and mappings so we can create a new index
-with TSDB enabled. This means that our settings and mappinhs have these
-**requirements**: 1) the index mode is `time_series`; 2) we have dimension fields
-in the mappings; 3) the `routing_path` includes all these dimensions. To get all of this:
-    1. We get the index of that data stream. We need to do this, because we cannot obtain
-   the mappings and settings through the data stream, only through an index.
-   2. We use the settings and mappings to create a new index template. We need the index template
-   so we can obtain the `routing_path` easily by setting the requirement `"allow_custom_routing": "false"`.
-   3. We create a new data stream that matches the index template. We need this because
-   the index template does not have the `routing_path` set (reason unknown).
-   4. We copy the settings and mappings and return them. These settings and mappings
-   have all the requirements to create the new TSDB index.
-   5. We delete this data stream and index template. It is easier to use an index because
-   a data stream will cause problems when trying to reindex (more on this can be found
-      [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-reindex.html)).
-3. Now that we have the settings and mappinggs, we **create an empty index** with that configuration.
-4. We **reindex** - this means that we copy - all documents from our original data stream to our newly
-create TSDB index.
-5. We check if the number of documents is the same.
-   6. _Is it the same?_ There was no loss of data.
-   7. _Is it not the same?_ All documents that were overwritten will be put in a new index and the dimensions
-   used to identify them will be displayed. We need to place these overwritten documents
-   in a new index because the field `_version` is not searchable, so this is the workaround.
+Please refer to the [sample](sample/README.md) to understand the basics of it.
 
 ## Realistic output example
 
@@ -151,14 +112,27 @@ In case TSDB migration was successful, ie, no loss of data occurred.
 ```console
 You're testing with version 8.8.0-SNAPSHOT.
 
-Using data stream metrics-istio.istiod_metrics-default to create new TSDB index tsdb-index-enabled...
-	The index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 will be used as the standard index for the mappings/settings.
+Using data stream metrics-elasticsearch.stack_monitoring.index_recovery-default to create new TSDB index tsdb-index-enabled...
+	The index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 will be used as the standard index for the mappings/settings.
+	The time series fields for the TSDB index are: 
+		- dimension:
+			- agent.id
+			- elasticsearch.index.name
+			- elasticsearch.index.recovery.id
+			- host.name
+			- service.address
+		- routing_path:
+			- agent.id
+			- elasticsearch.index.name
+			- host.name
+			- service.address
+
 Creating index tsdb-index-enabled...
 	Index tsdb-index-enabled exists and will be deleted.
 Index tsdb-index-enabled successfully created.
 
-Copying documents from .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 to tsdb-index-enabled...
-All 10000 documents taken from index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 were successfully placed to index tsdb-index-enabled.
+Copying documents from .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 to tsdb-index-enabled...
+All 40 documents taken from index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 were successfully placed to index tsdb-index-enabled.
 ```
 </details>
 
@@ -170,14 +144,26 @@ In case TSDB migration was not successful.
 ```console
 You're testing with version 8.8.0-SNAPSHOT.
 
-Using data stream metrics-istio.istiod_metrics-default to create new TSDB index tsdb-index-enabled...
-	The index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 will be used as the standard index for the mappings/settings.
+Using data stream metrics-elasticsearch.stack_monitoring.index_recovery-default to create new TSDB index tsdb-index-enabled...
+	The index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000003 will be used as the standard index for the mappings/settings.
+	The time series fields for the TSDB index are: 
+		- dimension:
+			- agent.id
+			- elasticsearch.index.name
+			- host.name
+			- service.address
+		- routing_path:
+			- agent.id
+			- elasticsearch.index.name
+			- host.name
+			- service.address
+
 Creating index tsdb-index-enabled...
 	Index tsdb-index-enabled exists and will be deleted.
 Index tsdb-index-enabled successfully created.
 
-Copying documents from .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001 to tsdb-index-enabled...
-WARNING: Out of 38829 documents from the index .ds-metrics-istio.istiod_metrics-default-2023.06.13-000001, 3242 of them were discarded.
+Copying documents from .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 to tsdb-index-enabled...
+WARNING: Out of 40 documents from the index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001, 18 of them were discarded.
 
 Index for the overwritten documents will be created...
 Creating index tsdb-overwritten-docs...
@@ -185,106 +171,56 @@ Creating index tsdb-overwritten-docs...
 Index tsdb-overwritten-docs successfully created.
 
 The timestamp and dimensions of the first 10 overwritten documents are:
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = /nvav668p0/1SUGKpp/iqPGeBvQ=
+- Timestamp 2023-06-20T08:16:02.213Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = another-split-index
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = 0sgWJXQUzSyPqp+dUA14QEXdSUU=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:15:52.212Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = another-split-index
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = 223lD4Lr2QfSW+uxD8GSnuPFj6w=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:15:42.212Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = another-split-index
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = 35M5nmhaXoUHJb/68k4pxv4qq4w=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:15:32.212Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = another-split-index
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = 4b92gpIKHf9qEv5gUdt/C7ZYe78=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:15:12.211Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = another-split-index
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = 7rif8Jq/O64SW4wDoSfy1gTwv6U=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:15:02.211Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = another-split-index
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = 8V1pJlwf4KnnzZBNL1i+3Agfi80=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:14:52.210Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = another-split-index
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = DWYCyptzUkLlISo7yXDriLaixDU=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:17:32.216Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = split-my-index-000001
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = GghR0I4GpX0AaGu+Z6SCbMRqLT8=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:17:22.216Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = split-my-index-000001
 	host.name = kind-control-plane
-	service.address = (Missing value)
-- Timestamp 2023-06-13T07:25:32.802Z:
-	cloud.provider = (Missing value)
-	agent.id = cb72267d-77f7-43b2-a7dc-16c6f325fd14
-	cloud.account.id = (Missing value)
-	cloud.instance.id = (Missing value)
-	cloud.region = (Missing value)
-	cloud.availability_zone = (Missing value)
-	istio.istiod.labels_id = HgK9dgqHAUNJd1JSA+cAR79vhRE=
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-20T08:17:02.215Z:
+	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
+	elasticsearch.index.name = split-my-index-000001
 	host.name = kind-control-plane
-	service.address = (Missing value)
+	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
 ```
 
 </details>
