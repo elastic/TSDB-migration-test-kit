@@ -9,11 +9,10 @@ get a better overview of what this is and why it is necessary.
 4. [Run](#Run)
 5. [Why is this important](#Why-is-this-important)
 6. [Understanding the program](#Understanding-the-program)
-7. [Algorithm in detail](#Algorithm-in-detail)
-8. [Realistic output example](#Realistic-output-example)
-9. [Test cases covered](#Test-cases-covered)
-10. [Cons of this approach (and why they are not important)](#Cons-of-this-approach-and-why-they-are-not-important)
-11. [Testing the dashboard](#Testing-the-dashboard)
+7. [Realistic output example](#Realistic-output-example)
+8. [Test cases covered](#Test-cases-covered)
+9. [Cons of this approach (and why they are not important)](#Cons-of-this-approach-and-why-they-are-not-important)
+10. [Testing the dashboard](#Testing-the-dashboard)
 
 
 ## Installation
