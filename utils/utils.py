@@ -149,7 +149,7 @@ def get_time_series_fields(client: Elasticsearch, index_name: str):
     fields = client.indices.get_mapping(index=index_name)[index_name]["mappings"]["properties"]
 
     # A function to flatten the name of the fields
-    def get_all_fields(fields: {}, common: str, result: {}, degree: int = 0):
+    def get_all_fields(fields: {}, common: str, result: {}):
         def join_strings(str1: str, str2: str):
             if str1 == "":
                 return str2
@@ -157,12 +157,9 @@ def get_time_series_fields(client: Elasticsearch, index_name: str):
 
         for key in fields:
             if "properties" in fields[key]:
-                get_all_fields(fields[key]["properties"], join_strings(common, key), result, degree + 1)
+                get_all_fields(fields[key]["properties"], join_strings(common, key), result)
             else:
-                all_keys = common.split(".")
-                previous = all_keys[-degree:] if degree > 0 else []
-                previous = ".".join(previous)
-                new_key = join_strings(previous, key)
+                new_key = join_strings(common, key)
                 result[new_key] = fields[key]
 
     result = {}
