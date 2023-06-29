@@ -122,18 +122,83 @@ def create_index_missing_for_docs(client: Elasticsearch):
     client.reindex(source={"index": tsdb_index}, dest=dest, refresh=True)
 
 
-def get_missing_docs_info(client: Elasticsearch, max_docs: int = 10):
+def build_query(dimensions: {}):
     """
-    Print the dimensions and timestamp of the first given number of max documents.
+    Build query to retrieve document based on the dimensions.
+    :param dimensions: Dictionary containing field and field value.
+    :return: query.
+    """
+    query = {
+        "bool": {
+            "must": []
+        }
+    }
+    for field in dimensions:
+        term = {
+            "term": {
+                field: dimensions[field]
+            }
+        }
+        query["bool"]["must"].append(term)
+
+    return query
+
+
+def get_and_place_documents(client: Elasticsearch, dir_name: str, dimensions_values: {}, n: int, number_of_docs,
+                    index_name: str):
+    """
+    Given the dimensions, place the documents in the directory.
     :param client: ES client.
-    :param max_docs: number of documents to read.
+    :param dir_name: Name of the parent directory.
+    :param dimensions_values:
+    :param n: Number of the directory inside the parent directory. Example: 1 would create dir_name/1.
+    :param number_of_docs: Number of documents to get with that set of dimensions.
+    :param index_name: Index name in which documents are stored.
     """
-    body = {'size': max_docs, 'query': {'match_all': {}}}
+    query = build_query(dimensions_values)
+
+    res = client.search(index=index_name, query=query, sort={"@timestamp": "asc"}, size=number_of_docs)
+
+    dir_for_docs = os.path.join(dir_name, str(n))
+    os.mkdir(dir_for_docs)
+
+    for doc in res["hits"]["hits"]:
+        name = doc["_id"] + ".json"
+        with open(os.path.join(dir_for_docs, name), 'w') as file:
+            json.dump(doc, file, indent=4)
+
+
+def get_missing_docs_info(client: Elasticsearch, display_docs: int = 10, dir: str = "",
+                          get_overlapping_files: bool = False,
+                          copy_docs_per_dimension: int = 2, docs_index: str = ""):
+    """
+    Display the dimensions of the first @display_docs documents.
+    If @get_overlapping_files is set to True, then @copy_docs_per_dimension documents will be placed in a directory
+    (if the directory does not exist!).
+    :param client: ES client.
+    :param display_docs: number of documents to display.
+    :param dir: name of the directory.
+    :param get_overlapping_files: true if you want to place fields in the directory, false otherwise.
+    :param copy_docs_per_dimension: number of documents to get for a set of dimensions.
+    :param docs_index: name of the index with the documents.
+    """
+    if get_overlapping_files:
+        if os.path.exists(dir):
+            print("WARNING: The directory {} exists. Please delete it. Documents will not be placed.\n".format(dir))
+            get_overlapping_files = False
+        else:
+            os.mkdir(dir)
+            n = 1
+
+    body = {'size': display_docs, 'query': {'match_all': {}}}
     res = client.search(index=overwritten_docs_index, body=body)
     dimensions = time_series_fields["dimension"]
 
-    print("The timestamp and dimensions of the first {} overwritten documents are:".format(max_docs))
+    print("The timestamp and dimensions of the first {} overwritten documents are:".format(display_docs))
     for doc in res["hits"]["hits"]:
+        if get_overlapping_files:
+            dimensions_values = {"@timestamp": doc["_source"]["@timestamp"]}
+
         print("- Timestamp {}:".format(doc["_source"]["@timestamp"]))
         for dimension in dimensions:
             el = doc["_source"]
@@ -144,6 +209,12 @@ def get_missing_docs_info(client: Elasticsearch, max_docs: int = 10):
                     break
                 el = el[key]
             print("\t{}: {}".format(dimension, el))
+            if el != "(Missing value)" and get_overlapping_files:
+                dimensions_values[dimension] = el
+
+        if get_overlapping_files:
+            get_and_place_documents(client, dir, dimensions_values, n, copy_docs_per_dimension, docs_index)
+            n += 1
 
 
 def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str, max_docs: int):
@@ -153,7 +224,8 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
     :param source_index: source index with the documents to be copied to a new index.
     :param dest_index: destination index for the documents.
     :param max_docs: max number of documents to copy.
-    :return: True if the number of documents is the same in the new index as it was in the old index.
+    :return: True if the number of documents is the same in the new index as it was in the old index. Also returns
+    the name of the index used to retrieve the documents.
     """
     print("Copying documents from {} to {}...".format(source_index, dest_index))
     if not client.indices.exists(index=source_index):
@@ -170,13 +242,13 @@ def copy_docs_from_to(client: Elasticsearch, source_index: str, dest_index: str,
                                                                                                     source_index,
                                                                                                     resp[
                                                                                                         "updated"]))
-        return False
+        return False, source_index
     else:
         print(
             "All {} documents taken from index {} were successfully placed to index {}.\n".format(resp["total"],
                                                                                                   source_index,
                                                                                                   dest_index))
-        return True
+        return True, source_index
 
 
 def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: int, settings_mappings_index: int):
@@ -235,7 +307,7 @@ def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, docs_ind
     :return: True if the number of documents placed to the TSDB index remained the same. False otherwise.
     """
     print("Testing data stream {}.".format(data_stream_name))
-    #print("Using data stream {} to create new TSDB index {}...".format(data_stream_name, tsdb_index))
+    # print("Using data stream {} to create new TSDB index {}...".format(data_stream_name, tsdb_index))
 
     if not client.indices.exists(index=data_stream_name):
         print("\tData stream {} does not exist. Program will end.".format(data_stream_name))

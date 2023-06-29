@@ -65,6 +65,28 @@ and the index number for the index you want to use for the settings and mappings
    This way, if you changed the data stream to include one existent field as dimension,
    you will not have to restart sending the documents, and can just use the data
    that is already there.
+- Do you want to get in a local directory some of the files that are being overwritten?
+Set these variables:
+    ```python
+    # Name of the directory to place files
+    directory_overlapping_files = "overwritten-docs"
+    
+    # Do you want to get in your @directory_overlapping_files the files that are overlapping?
+    # Set this to True and delete the directory named directory_overlapping_files if it already exists!
+    get_overlapping_files = False
+    ```
+  The directory should not exist! Otherwise, the files will not be placed, since we are
+not deleting the directory. An warning will be shown indicating that the files
+were not placed:
+    ```commandline
+    WARNING: The directory overwritten-docs exists. Please delete it. Documents will not be placed.
+    ```
+  In case they are placed, you will have in your project structure something
+similar to this:
+![img.png](images/img.png)
+    
+    And then you can just compare the files!
+
 
 ## Run
 
