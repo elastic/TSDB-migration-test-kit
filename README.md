@@ -10,9 +10,7 @@ get a better overview of what this is and why it is necessary.
 5. [Why is this important](#Why-is-this-important)
 6. [Understanding the program](#Understanding-the-program)
 7. [Realistic output example](#Realistic-output-example)
-8. [Test cases covered](#Test-cases-covered)
-9. [Cons of this approach (and why they are not important)](#Cons-of-this-approach-and-why-they-are-not-important)
-10. [Testing the dashboard](#Testing-the-dashboard)
+8. [Testing the dashboard](#Testing-the-dashboard)
 
 
 ## Installation
@@ -21,6 +19,7 @@ You need to install the [Python client for ElasticSearch](https://www.elastic.co
 ```console
 python -m pip install elasticsearch
 ```
+
 
 ## Requirements
 
@@ -34,7 +33,6 @@ You need to set the variables in the `main.py` file:
 
 ```python
 # Variables to configure the ES client
-# Variables to configure the ES client:
 elasticsearch_host = "https://localhost:9200"
 elasticsearch_ca_path = "/home/c/.elastic-package/profiles/default/certs/elasticsearch/ca-cert.pem"
 elasticsearch_user = "elastic"
@@ -76,6 +74,31 @@ After settings the values for all the variables, just run the python program:
 python main.py
 ```
 
+## Algorithm
+
+
+![img.png](images/algorithm.png)
+
+The algorithm for the program is as follows:
+1. Given the data stream name, we get all its indices.
+2. Given the documents index number provided by the user, we obtain the index
+name from the list we got on step 1.
+3. Given the settings/mappings index number provided by the user,
+we obtain the index name from the list we got on step 1.
+4. We retrieve the mappings and settings from the index we got on step 3.
+5. We update those same settings so TSDB is enabled.
+6. We create a new index given the settings and mappings. This index has
+TSDB enabled.
+7. We place the documents in index obtained on step 2 on our
+TSDB enabled new index.
+8. We compare if the number of files placed in the TSDB index is the same
+as the number of files we retrieved from the documents index.
+9. If it is the same, the program ends.
+10. Otherwise, we will place all updated documents in a new index.
+11. The dimensions and timestamp of the documents in this new index
+will be displayed in the output.
+
+
 ## Why is this important
 
 Currently, the testing for TSDB migration is all done manually.
@@ -111,27 +134,35 @@ In case TSDB migration was successful, ie, no loss of data occurred.
 ```console
 You're testing with version 8.8.0-SNAPSHOT.
 
-Using data stream metrics-elasticsearch.stack_monitoring.index_recovery-default to create new TSDB index tsdb-index-enabled...
-	The index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 will be used as the standard index for the mappings/settings.
-	The time series fields for the TSDB index are: 
-		- dimension:
-			- agent.id
-			- elasticsearch.index.name
-			- elasticsearch.index.recovery.id
-			- host.name
-			- service.address
-		- routing_path:
-			- agent.id
-			- elasticsearch.index.name
-			- host.name
-			- service.address
+Testing data stream metrics-aws.usage-default.
+Index being used for the documents is .ds-metrics-aws.usage-default-2023.06.29-000001.
+Index being used for the settings and mappings is .ds-metrics-aws.usage-default-2023.06.29-000001.
 
-Creating index tsdb-index-enabled...
-	Index tsdb-index-enabled exists and will be deleted.
+The time series fields for the TSDB index are: 
+	- dimension (7 fields):
+		- agent.id
+		- aws.dimensions.Class
+		- aws.dimensions.Resource
+		- aws.dimensions.Service
+		- aws.dimensions.Type
+		- cloud.account.id
+		- cloud.region
+	- gauge (2 fields):
+		- aws.usage.metrics.CallCount.sum
+		- aws.usage.metrics.ResourceCount.sum
+	- routing_path (7 fields):
+		- agent.id
+		- aws.dimensions.Class
+		- aws.dimensions.Resource
+		- aws.dimensions.Service
+		- aws.dimensions.Type
+		- cloud.account.id
+		- cloud.region
+
 Index tsdb-index-enabled successfully created.
 
-Copying documents from .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 to tsdb-index-enabled...
-All 40 documents taken from index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 were successfully placed to index tsdb-index-enabled.
+Copying documents from .ds-metrics-aws.usage-default-2023.06.29-000001 to tsdb-index-enabled...
+All 5000 documents taken from index .ds-metrics-aws.usage-default-2023.06.29-000001 were successfully placed to index tsdb-index-enabled.
 ```
 </details>
 
@@ -143,119 +174,123 @@ In case TSDB migration was not successful.
 ```console
 You're testing with version 8.8.0-SNAPSHOT.
 
-Using data stream metrics-elasticsearch.stack_monitoring.index_recovery-default to create new TSDB index tsdb-index-enabled...
-	The index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000003 will be used as the standard index for the mappings/settings.
-	The time series fields for the TSDB index are: 
-		- dimension:
-			- agent.id
-			- elasticsearch.index.name
-			- host.name
-			- service.address
-		- routing_path:
-			- agent.id
-			- elasticsearch.index.name
-			- host.name
-			- service.address
+Testing data stream metrics-aws.usage-default.
+Index being used for the documents is .ds-metrics-aws.usage-default-2023.06.29-000001.
+Index being used for the settings and mappings is .ds-metrics-aws.usage-default-2023.06.29-000001.
 
-Creating index tsdb-index-enabled...
-	Index tsdb-index-enabled exists and will be deleted.
+The time series fields for the TSDB index are: 
+	- dimension (7 fields):
+		- agent.id
+		- aws.dimensions.Class
+		- aws.dimensions.Resource
+		- aws.dimensions.Service
+		- aws.dimensions.Type
+		- cloud.account.id
+		- cloud.region
+	- gauge (2 fields):
+		- aws.usage.metrics.CallCount.sum
+		- aws.usage.metrics.ResourceCount.sum
+	- routing_path (7 fields):
+		- agent.id
+		- aws.dimensions.Class
+		- aws.dimensions.Resource
+		- aws.dimensions.Service
+		- aws.dimensions.Type
+		- cloud.account.id
+		- cloud.region
+
 Index tsdb-index-enabled successfully created.
 
-Copying documents from .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001 to tsdb-index-enabled...
-WARNING: Out of 40 documents from the index .ds-metrics-elasticsearch.stack_monitoring.index_recovery-default-2023.06.20-000001, 18 of them were discarded.
+Copying documents from .ds-metrics-aws.usage-default-2023.06.29-000001 to tsdb-index-enabled...
+WARNING: Out of 10000 documents from the index .ds-metrics-aws.usage-default-2023.06.29-000001, 152 of them were discarded.
 
-Index for the overwritten documents will be created...
-Creating index tsdb-overwritten-docs...
-	Index tsdb-overwritten-docs exists and will be deleted.
+Overwritten documents will be placed in new index.
 Index tsdb-overwritten-docs successfully created.
 
 The timestamp and dimensions of the first 10 overwritten documents are:
-- Timestamp 2023-06-20T08:16:02.213Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = another-split-index
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:15:52.212Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = another-split-index
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:15:42.212Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = another-split-index
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:15:32.212Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = another-split-index
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:15:12.211Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = another-split-index
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:15:02.211Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = another-split-index
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:14:52.210Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = another-split-index
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:17:32.216Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = split-my-index-000001
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:17:22.216Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = split-my-index-000001
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
-- Timestamp 2023-06-20T08:17:02.215Z:
-	agent.id = ef1c22aa-7ff8-4391-9bcb-9d56d5587d20
-	elasticsearch.index.name = split-my-index-000001
-	host.name = kind-control-plane
-	service.address = https://test-es-1.es.us-central1.gcp.cloud.es.io:9243
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: Spot
+	aws.dimensions.Service: Fargate
+	aws.dimensions.Type: Resource
+	cloud.account.id: 627286350134
+	cloud.region: eu-north-1
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: Spot
+	aws.dimensions.Service: Fargate
+	aws.dimensions.Type: Resource
+	cloud.account.id: 627286350134
+	cloud.region: ap-southeast-1
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: OnDemand
+	aws.dimensions.Service: Fargate
+	aws.dimensions.Type: Resource
+	cloud.account.id: 627286350134
+	cloud.region: us-east-2
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: OnDemand
+	aws.dimensions.Service: Fargate
+	aws.dimensions.Type: Resource
+	cloud.account.id: 627286350134
+	cloud.region: eu-north-1
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: OnDemand
+	aws.dimensions.Service: Fargate
+	aws.dimensions.Type: Resource
+	cloud.account.id: 627286350134
+	cloud.region: ap-southeast-1
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: TableCount
+	aws.dimensions.Service: DynamoDB
+	aws.dimensions.Type: Resource
+	cloud.account.id: 627286350134
+	cloud.region: us-east-1
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: ListMetrics
+	aws.dimensions.Service: CloudWatch
+	aws.dimensions.Type: API
+	cloud.account.id: 627286350134
+	cloud.region: eu-west-1
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: ListMetrics
+	aws.dimensions.Service: CloudWatch
+	aws.dimensions.Type: API
+	cloud.account.id: 627286350134
+	cloud.region: eu-west-2
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: ListMetrics
+	aws.dimensions.Service: CloudWatch
+	aws.dimensions.Type: API
+	cloud.account.id: 627286350134
+	cloud.region: eu-west-3
+- Timestamp 2023-06-29T13:24:00.000Z:
+	agent.id: 178edbcb-2132-497d-b6da-e8c7d8095a90
+	aws.dimensions.Class: None
+	aws.dimensions.Resource: ListMetrics
+	aws.dimensions.Service: CloudWatch
+	aws.dimensions.Type: API
+	cloud.account.id: 627286350134
+	cloud.region: sa-east-1
 ```
 
 </details>
-
-
-
-
-## Test cases covered
-
-The testing checks we need to do now can be resumed in just two points:
-
-- [x] Check the number of documents is the same for when TSDB is disabled vs enabled
-- [ ] Check the dashboard works as expected for both modes.
-
-This approach covers well the first case, but checking the dashboards is still
-a process that needs to be done manually (see next section on why I think this
-is not an obstacle to adopt this approach).
-
-
-## Cons of this approach (and why they are not important)
-
-1. We have no easy way to use the data from the index with TSDB disabled for
-the dashboards. We would have to go to each visualization and change the data view
-(more on this on the next section).
-Why not important: problems regarding the dashboards should all be fixed by now.
-If there are still aggregations being used in an incorrect way, that is a process
-that will have to be done manually, regarding of TSDB being enabled or not. Otherwise,
-fixing the dashboards automatically is a totally different (and needed!) problem
-from the TSDB migration.
-
-2. We are following this **TSDB disabled > TSDB enabled** instead of
-**TSDB disabled > TSDB enabled > TSDB disabled** and checking if all documents
-passed the migrations. I chose to do this because disabling TSDB and checking
-that we did not lose any data is a general problem and not something related
-to an integration. And just like the dashboards, all problems related to this
-should be fixed by now.
 
 
 ## Testing the dashboard

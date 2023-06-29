@@ -9,7 +9,7 @@ Since two of the documents are identified by the same dimension (`name: Joana`),
 of the three documents will be part of the TSDB index. The document that was overwritten
 will be copied to a new index.
 
-### Important: Understanding overwritten documents
+## Understanding overwritten documents
 
 The number of documents placed in the index intended for them **might not** correspond
 to the number of all files we lost!
@@ -23,8 +23,6 @@ and ended with just 1 overwritten document.**
 
 ## Algorithm
 
-This is just an overview of the algorithm. You can find the detailed one
-in [here](../README.md).
 
 ### Prepare the setup to test the example
 
@@ -52,7 +50,7 @@ All this is being done when calling the function:
 copy_from_data_stream(client, data_stream_name)
 ```
 
-After the document have been placed to the TSDB index, two things can happen:
+After the documents have been placed to the TSDB index, two things can happen:
 1. A message similar to this one is displayed:
 ```console
 Copying documents from .ds-metrics-docker.cpu-default-2023.06.08-000001 to tsdb-index-enabled...
@@ -69,7 +67,7 @@ copy all of these to a new index. We need to do this because the field `_version
 is not searchable:
 
 ```python
-print("Index for the overwritten documents will be created...")
+print("Overwritten documents will be placed in new index.")
 create_index_missing_for_docs(client)
 get_missing_docs_info(client)
 ```
@@ -99,23 +97,29 @@ Ready to start.
 Placing documents on the index test-tsdb-sample...
 Successfully placed 3 documents on the index test-tsdb-sample.
 
-Using data stream test-tsdb-sample to create new TSDB index tsdb-index-enabled...
-	The index .ds-test-tsdb-sample-2023.06.09-000001 will be used as the standard index.
-Creating index tsdb-index-enabled...
-	Index tsdb-index-enabled exists and will be deleted.
+Testing data stream test-tsdb-sample.
+Index being used for the documents is .ds-test-tsdb-sample-2023.06.29-000001.
+Index being used for the settings and mappings is .ds-test-tsdb-sample-2023.06.29-000001.
+
+The time series fields for the TSDB index are: 
+	- dimension (1 fields):
+		- name
+	- counter (1 fields):
+		- age
+	- routing_path (1 fields):
+		- name
+
 Index tsdb-index-enabled successfully created.
 
-Copying documents from .ds-test-tsdb-sample-2023.06.09-000001 to tsdb-index-enabled...
-WARNING: Out of 3 documents from the index .ds-test-tsdb-sample-2023.06.09-000001, 1 of them was/were discarded.
+Copying documents from .ds-test-tsdb-sample-2023.06.29-000001 to tsdb-index-enabled...
+WARNING: Out of 3 documents from the index .ds-test-tsdb-sample-2023.06.29-000001, 1 of them were discarded.
 
-Index for the overwritten documents will be created...
-Creating index tsdb-overwritten-docs...
-	Index tsdb-overwritten-docs exists and will be deleted.
+Overwritten documents will be placed in new index.
 Index tsdb-overwritten-docs successfully created.
 
 The timestamp and dimensions of the first 10 overwritten documents are:
 - Timestamp 2099-11-15T13:12:00.000Z:
-	name = Joana
+	name: Joana
 ```
 
 
