@@ -15,7 +15,7 @@ cloud_id = ""
 data_stream = "metrics-aws.usage-default"
 
 # Name of the directory to place files
-directory_overlapping_files = "overwritten-docs"
+directory_overlapping_files = "overwritten-docs" + "-" + data_stream
 
 # Do you want to get in your @directory_overlapping_files the files that are overlapping?
 # Set this to True and delete the directory named directory_overlapping_files if it already exists!
