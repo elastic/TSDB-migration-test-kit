@@ -27,7 +27,7 @@ if __name__ == '__main__':
     client = get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd, cloud_id, elastic_pwd)
     print("You're testing with version {}.\n".format(client.info()["version"]["number"]))
 
-    all_placed = copy_from_data_stream(client, data_stream, docs_index=4)
+    all_placed = copy_from_data_stream(client, data_stream)
 
     ## Is running this function too slow or encounterint a timeout? Please set the number of max documents as this:
     ## all_placed = copy_from_data_stream(client, data_stream, max_docs=5000)
