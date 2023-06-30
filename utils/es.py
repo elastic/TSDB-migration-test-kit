@@ -265,17 +265,17 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
     if docs_index == -1:
         docs_index = 0
     elif docs_index >= n_indexes:
-        print("\tWARNING: Data stream {} has {} indexes. The document index used will be 0 "
-              "instead of the given {}.".format(data_stream_name, n_indexes, docs_index))
-        docs_index = 0
+        print("ERROR: Data stream {} has {} indexes. Index number {} is not valid.".format(data_stream_name, n_indexes,
+                                                                                           docs_index))
+        exit(0)
 
     # Get index to use for settings/mappings
     if settings_mappings_index == -1:
         settings_index = n_indexes - 1
     elif settings_mappings_index >= n_indexes:
-        settings_index = n_indexes - 1
-        print("\tWARNING: Data stream {} has {} indexes. The settings index used will be {} "
-              "instead of the given {}.".format(data_stream_name, n_indexes, settings_index, settings_index + 1))
+        print("ERROR: Data stream {} has {} indexes. Index number {} is not valid.".format(data_stream_name, n_indexes,
+                                                                                           settings_mappings_index))
+        exit(0)
 
     docs_index_name = data_stream["data_streams"][0]["indices"][docs_index]["index_name"]
     settings_mappings_index_name = data_stream["data_streams"][0]["indices"][settings_index]["index_name"]
