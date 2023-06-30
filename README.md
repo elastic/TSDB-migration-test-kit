@@ -1,3 +1,5 @@
+**This program was build and tested with Python version 3.10.**
+
 This repository contains the code to a new approach for testing
 TSDB migration. In [Why is this important](#Why-is-this-important) you
 get a better overview of what this is and why it is necessary.
@@ -11,6 +13,7 @@ get a better overview of what this is and why it is necessary.
 6. [Understanding the program](#Understanding-the-program)
 7. [Realistic output example](#Realistic-output-example)
 8. [Testing the dashboard](#Testing-the-dashboard)
+9. [Other questions](#Other-questions)
 
 
 ## Installation
@@ -29,7 +32,7 @@ python -m pip install elasticsearch
 
 ## Set up
 
-You need to set the variables in the `main.py` file:
+You need to set the variables in the `main.py` file for the ES python client:
 
 ```python
 # Variables to configure the ES client
@@ -39,12 +42,18 @@ elasticsearch_user = "elastic"
 elasticsearch_pwd = "changeme"
 
 # If you are running on cloud, you should set these two. If they are not empty, then the client will connect
-# to the cloud using these variables, instead of the above ones.
+# to the cloud using these variables, instead of the ones above.
 elastic_pwd = ""
 cloud_id = ""
 ```
 
-You can also change the defaults in the `main.py` for:
+You also need to set the name of the data stream you want to test:
+```python
+# Name of the data stream to test
+data_stream = "metrics-aws.usage-default"
+```
+
+Additionally, the `main.py` has defaults for:
 - The number of documents you want to copy from the TSDB disabled index. Just add
  the parameter `max_docs` to the `copy_from_data_stream` function, like this:
    ```python
@@ -65,6 +74,10 @@ and the index number for the index you want to use for the settings and mappings
    This way, if you changed the data stream to include one existent field as dimension,
    you will not have to restart sending the documents, and can just use the data
    that is already there.
+
+
+
+
 - Do you want to get in a local directory some of the files that are being overwritten?
 Set these variables:
     ```python
@@ -73,19 +86,41 @@ Set these variables:
     
     # Do you want to get in your @directory_overlapping_files the files that are overlapping?
     # Set this to True and delete the directory named directory_overlapping_files if it already exists!
-    get_overlapping_files = False
+    get_overlapping_files = True
     ```
-  The directory should not exist! Otherwise, the files will not be placed, since we are
-not deleting the directory. An warning will be shown indicating that the files
+  > **Note**: The directory should not exist! Otherwise, the files will not be placed, since we are
+not deleting the directory. A warning will be shown indicating that the files
 were not placed:
-    ```commandline
-    WARNING: The directory overwritten-docs exists. Please delete it. Documents will not be placed.
-    ```
-  In case they are placed, you will have in your project structure something
+    > ```commandline
+    > WARNING: The directory overwritten-docs exists. Please delete it. Documents will not be placed.
+    > ```
+  If the documents are placed, your project structure will be
 similar to this:
 ![img.png](images/img.png)
     
-    And then you can just compare the files!
+    And then you can just compare the files and see which fields should habe
+been set as dimension!
+
+    > **Note**: By default, the program will only create 10 folders
+for the first 10 set of dimensions causing loss of data. For each of
+these folders, it will only get two documents that are overlapping - this
+does not mean that there are no more documents overlapping for those
+set of dimensions. If you want to change these default values, have
+a look at the function in `es.py`:
+    >```python
+    > def get_missing_docs_info(client: Elasticsearch, data_stream: str, display_docs: int = 10, dir: str = "",
+    >                      get_overlapping_files: bool = False,
+    >                      copy_docs_per_dimension: int = 2):
+    >```
+    > And then just change in the `main.py` the respective parameters. For
+    example, if you just want to get the first 5 set of dimensions causing
+    loss of data, and 3 documents for each of these:
+    > ```python
+    > get_missing_docs_info(client, data_stream, dir=directory_overlapping_files, get_overlapping_files=get_overlapping_files,
+    > display_docs=5, copy_docs_per_dimension=3)
+    > ```
+    
+    
 
 
 ## Run
@@ -103,9 +138,10 @@ python main.py
 
 The algorithm for the program is as follows:
 1. Given the data stream name, we get all its indices.
-2. Given the documents index number provided by the user, we obtain the index
+2. Given the documents index number provided by the user (or the default, 0), we obtain the index
 name from the list we got on step 1.
-3. Given the settings/mappings index number provided by the user,
+3. Given the settings/mappings index number provided by the user (or the default,
+the last index available in the data stream),
 we obtain the index name from the list we got on step 1.
 4. We retrieve the mappings and settings from the index we got on step 3.
 5. We update those same settings so TSDB is enabled.
@@ -335,3 +371,54 @@ You have a tiring and repetitive process in front of you:
 change the data view to the one you just created:
 
    ![img.png](images/img_1.png)
+
+
+## Other questions
+
+**Is TSDB enabled in the index I use for the documents?**
+
+The index you use for documents is obtained in this line:
+```python
+all_placed = copy_from_data_stream(client, data_stream)
+```
+In this, it would be the default, which is 0. If you set your own
+`docs_index`, then that one will be used.
+
+It does not matter if TSDB is enabled or not. The program will only
+use this index to retrieve documents, so as long as there is data,
+nothing should go wrong.
+
+However, does it make sense to use an index with TSDB enabled to retrieve
+the documents? If you are testing the dimensions, then the overlap
+of data already occurred as soon as the documents were placed in the
+index.
+
+
+**Is TSDB enabled in the index I use for the settings/mappings?**
+
+It does not matter, as long as you have dimensions valid to be part of
+the routing path.
+
+
+**What is the name of the index where we are placing the documents
+with TSDB enabled?**
+
+The index is named `tsdb-index-enabled`. You should be able to see this information
+in the output messages.
+
+
+**What is the name of the index where we are placing the overwritten
+documents?**
+
+The index is named `tsdb-overwritten-docs`. You should be able to see this information
+in the output messages.
+
+
+**Where are the defaults for every index created and everything else
+related to TSDB?**
+
+The defaults are in `utils/tsdb.py`. Each one has a comment that
+should be clear enough to understand.
+
+
+

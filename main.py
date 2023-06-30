@@ -7,7 +7,7 @@ elasticsearch_user = "elastic"
 elasticsearch_pwd = "changeme"
 
 # If you are running on cloud, you should set these two. If they are not empty, then the client will connect
-# to the cloud using these variables, instead of the above ones.
+# to the cloud using these variables, instead of the ones above.
 elastic_pwd = ""
 cloud_id = ""
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # Did you change the mappings of the data stream and still want to use the documents from one index
     # but the settings/mappings of the other? You can set the index for each one like this:
-    # all_placed = copy_from_data_stream(client, data_stream, docs_index=0,settings_index=1)
+    # all_placed = copy_from_data_stream(client, data_stream, docs_index=0,settings_mappings_index=1)
     # Note: an index 000001, has the docs_index has 0; an index 000002, has the docs_index 1, and so on.
 
     if not all_placed:
