@@ -278,7 +278,7 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
         exit(0)
 
     docs_index_name = data_stream["data_streams"][0]["indices"][docs_index]["index_name"]
-    settings_mappings_index_name = data_stream["data_streams"][0]["indices"][settings_index]["index_name"]
+    settings_mappings_index_name = data_stream["data_streams"][0]["indices"][settings_mappings_index]["index_name"]
 
     print("Index being used for the documents is {}.".format(docs_index_name))
     print("Index being used for the settings and mappings is {}.".format(settings_mappings_index_name))
@@ -305,7 +305,6 @@ def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, docs_ind
     :return: True if the number of documents placed to the TSDB index remained the same. False otherwise.
     """
     print("Testing data stream {}.".format(data_stream_name))
-    # print("Using data stream {} to create new TSDB index {}...".format(data_stream_name, tsdb_index))
 
     if not client.indices.exists(index=data_stream_name):
         print("\tData stream {} does not exist. Program will end.".format(data_stream_name))
