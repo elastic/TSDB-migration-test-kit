@@ -38,10 +38,8 @@ def discard_unknown_settings(settings: []):
 
 def get_time_series_fields(mappings: {}):
     """
-    Place all fields from an index ...
-    :param client:
-    :param index_name:
-    :return:
+    Place all fields in the time time_series_fields dictionary.
+    :param mappings: Mappings dictionary.
     """
     fields = mappings["properties"]
 
@@ -84,8 +82,14 @@ def get_time_series_fields(mappings: {}):
     print()
 
 
-# Given a data stream, we copy the mappings and settings and modify them for the TSDB index.
 def get_tsdb_settings(mappings: {}, settings: {}):
+    """
+    Modify the settings, so they fit the TSDB enabled mode.
+    Get all time series metrics using the mappings.
+    :param mappings: mappings.
+    :param settings: settings.
+    :return: modified settings for the TSDB index.
+    """
     # Some settings cause an error on the ES client. This function removes them.
     discard_unknown_settings(settings)
     # Add the time_series mode
