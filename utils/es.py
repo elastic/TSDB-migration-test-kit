@@ -271,7 +271,7 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
 
     # Get index to use for settings/mappings
     if settings_mappings_index == -1:
-        settings_index = n_indexes - 1
+        settings_mappings_index = n_indexes - 1
     elif settings_mappings_index >= n_indexes:
         print("ERROR: Data stream {} has {} indexes. Index number {} is not valid.".format(data_stream_name, n_indexes,
                                                                                            settings_mappings_index))
