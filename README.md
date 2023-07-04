@@ -1,19 +1,17 @@
 **This program was build and tested with Python version 3.10.**
 
 This repository contains the code to a new approach for testing
-TSDB migration. In [Why is this important](#Why-is-this-important) you
-get a better overview of what this is and why it is necessary.
+TSDB migration. 
 
 # Table of Contents
 1. [Installation](#Installation)
 2. [Requirements](#Requirements)
 3. [Set up](#Set-up)
 4. [Run](#Run)
-5. [Why is this important](#Why-is-this-important)
-6. [Understanding the program](#Understanding-the-program)
-7. [Realistic output example](#Realistic-output-example)
-8. [Testing the dashboard](#Testing-the-dashboard)
-9. [Other questions](#Other-questions)
+5. [Understanding the program](#Understanding-the-program)
+6. [Realistic output example](#Realistic-output-example)
+7. [Testing the dashboard](#Testing-the-dashboard)
+8. [Other questions](#Other-questions)
 
 
 ## Installation
@@ -169,27 +167,6 @@ as the number of files we retrieved from the documents index.
 10. Otherwise, we will place all updated documents in a new index.
 11. The dimensions and timestamp of the documents in this new index
 will be displayed in the output.
-
-
-## Why is this important
-
-Currently, the testing for TSDB migration is all done manually.
-The steps for this testing process can be found in [this document](https://docs.google.com/document/d/1l-PCY9zHQ0TTyQuCSbf5qKUvxV7lpfMybY0APMJweRI/edit#heading=h.qrq8p339p7it).
-
-There are a few drawbacks to this testing process:
-1. If we receive documents in an inconsistent manner (like it happens with GCP integration) then we cannot see if we
-lose information or not when TSDB is enabled.
-2. If we receive lots of documents, it is very hard to find which ones were lost. We have to do that manually.
-3. If we want to create situations that cause a conflict to check if TSDB is working correctly, we need to do it twice: one for TSDB disabled and one for TSDB enabled.
-4. If waiting to test for an index for 1 hour for each mode, then we would have to do the exact same thing twice:
-once for when TSDB is disabled, and once for when TSDB is enabled, each mode for 1 hour.
-
-
-This makes the testing process very vulnerable (and tiring).
-
-This approach tries to fix all those vulnerabilities in a way that the only thing
-the tester needs to do is give as an input the `data_stream` name with TSDB disabled.
-After that, the program will tell the tester if the dimensions set are enough or not.
 
 
 ## Understanding the program
