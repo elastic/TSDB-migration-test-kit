@@ -62,7 +62,7 @@ Additionally, the `main.py` has defaults for:
 - The index number from the data stream you want to use to retrieve the documents,
 and the index number for the index you want to use for the settings and mappings:
    ```python
-   copy_from_data_stream(client, data_stream, docs_index=0,settings_index=1)
+   copy_from_data_stream(client, data_stream, docs_index=0,settings_mappings_index=1)
    ```
   
    Confused by this? Imagine a data stream with two indexes:
