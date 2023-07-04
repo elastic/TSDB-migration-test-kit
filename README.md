@@ -137,7 +137,7 @@ If you prefer to set the parameters values through the command line run:
 python main.py --help
 ```
 
-To see the options.
+To see the options. The default values are also displayed.
 
 Example:
 
@@ -393,7 +393,7 @@ change the data view to the one you just created:
 
 The index you use for documents is obtained in this line:
 ```python
-all_placed = copy_from_data_stream(client, data_stream)
+all_placed = copy_from_data_stream(...)
 ```
 In this, it would be the default, which is 0. If you set your own
 `docs_index`, then that one will be used.
