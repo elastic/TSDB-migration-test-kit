@@ -73,6 +73,10 @@ def get_time_series_fields(mappings: {}):
 
     cluster_fields_by_type(result)
 
+    if len(time_series_fields["routing_path"]) == 0:
+        print("Routing path is empty. Program will end.")
+        exit(0)
+
     print("The time series fields for the TSDB index are: ")
     for key in time_series_fields:
         if len(time_series_fields[key]) > 0:
@@ -97,9 +101,6 @@ def get_tsdb_settings(mappings: {}, settings: {}):
 
     # Get all time series fields
     get_time_series_fields(mappings)
-    if len(time_series_fields["routing_path"]) == 0:
-        print("Routing path is empty. Program will end.")
-        exit(0)
 
     # Set a new window to avoid time series end / start time errors
     time_series = {

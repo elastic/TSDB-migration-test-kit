@@ -32,40 +32,45 @@ python -m pip install elasticsearch
 
 ## Set up
 
+This set up is only to set the default values through the `main.py` file. If
+you rather do this through the command line, skip this and refer to [Run](#Run).
+
 You need to set the variables in the `main.py` file for the ES python client:
 
 ```python
-# Variables to configure the ES client
-elasticsearch_host = "https://localhost:9200"
-elasticsearch_ca_path = "/home/c/.elastic-package/profiles/default/certs/elasticsearch/ca-cert.pem"
-elasticsearch_user = "elastic"
-elasticsearch_pwd = "changeme"
+# Variables to configure the ES client:
+"elasticsearch_host": "https://localhost:9200",
+"elasticsearch_ca_path": "/home/c/.elastic-package/profiles/default/certs/elasticsearch/ca-cert.pem",
+"elasticsearch_user": "elastic",
+"elasticsearch_pwd": "changeme",
 
 # If you are running on cloud, you should set these two. If they are not empty, then the client will connect
 # to the cloud using these variables, instead of the ones above.
-elastic_pwd = ""
-cloud_id = ""
+"cloud_pwd": "",
+"cloud_id": "",
 ```
 
 You also need to set the name of the data stream you want to test:
 ```python
 # Name of the data stream to test
-data_stream = "metrics-aws.usage-default"
+"data_stream": "metrics-aws.s3_storage_lens-default",
 ```
 
 Additionally, the `main.py` has defaults for:
-- The number of documents you want to copy from the TSDB disabled index. Just add
- the parameter `max_docs` to the `copy_from_data_stream` function, like this:
+- The number of documents you want to copy from the TSDB disabled index. Change
+ the parameter `max_docs`:
    ```python
-   all_placed = copy_from_data_stream(client, data_stream, max_docs=5000)
+   "max_docs": 10000
    ```
+  `-1` indicates that all documents from the index must be placed to the TSDB index.
 - The index number from the data stream you want to use to retrieve the documents,
 and the index number for the index you want to use for the settings and mappings:
    ```python
-   copy_from_data_stream(client, data_stream, docs_index=0,settings_mappings_index=1)
-   ```
+   "docs_index": 1,
+   "settings_mappings_index": 3,
+  ```
   
-   Confused by this? Imagine a data stream with two indexes:
+   Confused by this? Imagine a data stream with two indices:
 
    ![img_2.png](images/img_2.png)
 
@@ -73,7 +78,8 @@ and the index number for the index you want to use for the settings and mappings
    that has the documents. The last index is the default for the settings/mappings.
    This way, if you changed the data stream to include one existent field as dimension,
    you will not have to restart sending the documents, and can just use the data
-   that is already there.
+   that is already there. In the program, these defaults are, for both parameters,
+    indicated by `-1`.
 
 
 
@@ -81,12 +87,12 @@ and the index number for the index you want to use for the settings and mappings
 - Do you want to get in a local directory some of the files that are being overwritten?
 Set these variables:
     ```python
-    # Name of the directory to place files
-    directory_overlapping_files = "overwritten-docs" + "-" + data_stream
-    
+    # Name of the directory to place files.
+    "directory_overlapping_files": "overwritten-docs" + "-" + program_defaults["data_stream"],
+
     # Do you want to get in your @directory_overlapping_files the files that are overlapping?
     # Set this to True and delete the directory named directory_overlapping_files if it already exists!
-    get_overlapping_files = True
+    "get_overlapping_files": True,
     ```
   > **Note**: The directory should not exist! Otherwise, the files will not be placed, since we are
 not deleting the directory. A warning will be shown indicating that the files
@@ -105,19 +111,13 @@ been set as dimension!
 for the first 10 set of dimensions causing loss of data. For each of
 these folders, it will only get two documents that are overlapping - this
 does not mean that there are no more documents overlapping for those
-set of dimensions. If you want to change these default values, have
-a look at the function in `es.py`:
-    >```python
-    > def get_missing_docs_info(client: Elasticsearch, data_stream: str, display_docs: int = 10, dir: str = "",
-    >                      get_overlapping_files: bool = False,
-    >                      copy_docs_per_dimension: int = 2):
-    >```
-    > And then just change in the `main.py` the respective parameters. For
-    example, if you just want to get the first 5 set of dimensions causing
-    loss of data, and 3 documents for each of these:
+set of dimensions. If you want to change these default values, have a look at:
     > ```python
-    > get_missing_docs_info(client, data_stream, dir=directory_overlapping_files, get_overlapping_files=get_overlapping_files,
-    > display_docs=5, copy_docs_per_dimension=3)
+    > # How many sets of dimensions do you want to print that are causing loss of data?
+    > # This value also indicates how many directories will be created in case get_overlapping_files is set to True.
+    > "display_docs": 10,
+    > # How many documents you want to retrieve per set of dimensions causing a loss of data?
+    > "copy_docs_per_dimension": 2
     > ```
     
     
@@ -129,6 +129,20 @@ After settings the values for all the variables, just run the python program:
 
 ```python
 python main.py
+```
+
+If you prefer to set the parameters values through the command line run:
+
+```python
+python main.py --help
+```
+
+To see the options.
+
+Example:
+
+```python
+python main.py --get_overlapping_files False --max_docs 40000
 ```
 
 ## Algorithm

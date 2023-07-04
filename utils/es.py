@@ -11,8 +11,7 @@ import os.path
 from utils.tsdb import *
 
 
-def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd, cloud_id="",
-               elastic_pwd=""):
+def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd, cloud_id, cloud_pwd):
     """
     Create ES client.
     If cloud values are provided, they will take priority over the local deployment.
@@ -21,14 +20,14 @@ def get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, el
     :param elasticsearch_user: Name of the ES user.
     :param elasticsearch_pwd: Password for ES.
     :param cloud_id: Cloud ID. Default is empty.
-    :param elastic_pwd: Password for the elastic cloud. Default is empty.
+    :param cloud_pwd: Password for the elastic cloud. Default is empty.
     :return: ES client.
     """
-    if cloud_id != "" and elastic_pwd != "":
-        print("Client will connect to the cloud.\n")
+    if cloud_id != "" and cloud_pwd != "":
+        print("Client will connect to the cloud.")
         return Elasticsearch(
             cloud_id=cloud_id,
-            basic_auth=("elastic", elastic_pwd)
+            basic_auth=("elastic", cloud_pwd)
         )
     return Elasticsearch(
         hosts=elasticsearch_host,
@@ -167,9 +166,8 @@ def get_and_place_documents(client: Elasticsearch, data_stream: str, dir_name: s
             json.dump(doc, file, indent=4)
 
 
-def get_missing_docs_info(client: Elasticsearch, data_stream: str, display_docs: int = 10, dir: str = "",
-                          get_overlapping_files: bool = False,
-                          copy_docs_per_dimension: int = 2):
+def get_missing_docs_info(client: Elasticsearch, data_stream: str, display_docs: int, dir,
+                          get_overlapping_files: bool, copy_docs_per_dimension: int):
     """
     Display the dimensions of the first @display_docs documents.
     If @get_overlapping_files is set to True, then @copy_docs_per_dimension documents will be placed in a directory
@@ -293,8 +291,8 @@ def get_tsdb_config(client: Elasticsearch, data_stream_name: str, docs_index: in
     return docs_index_name, mappings, settings
 
 
-def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, docs_index: int = -1,
-                          settings_mappings_index: int = -1, max_docs: int = -1):
+def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, docs_index: int,settings_mappings_index: int,
+                          max_docs: int):
     """
     Given a data stream, it copies the documents retrieved from the given index and places them in a new
     index with TSDB enabled.
@@ -302,7 +300,7 @@ def copy_from_data_stream(client: Elasticsearch, data_stream_name: str, docs_ind
     :param data_stream_name: name of the data stream.
     :param docs_index: number of the index to use to retrieve the documents.
     :param settings_mappings_index: number of the index to use to get the mappings and settings for the TSDB index.
-    :param max_docs:
+    :param max_docs: maximum documents to be reindexed.
     :return: True if the number of documents placed to the TSDB index remained the same. False otherwise.
     """
     print("Testing data stream {}.".format(data_stream_name))

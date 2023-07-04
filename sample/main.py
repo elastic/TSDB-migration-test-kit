@@ -65,7 +65,7 @@ def prepare_set_up(client: Elasticsearch, data_stream_name: str, index_template_
 
 if __name__ == '__main__':
     # Create the client instance
-    client = get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd)
+    client = get_client(elasticsearch_host, elasticsearch_ca_path, elasticsearch_user, elasticsearch_pwd, "", "")
     print("You're testing with version {}.\n".format(client.info()["version"]["number"]))
 
     # To reproduce something similar to what we need to test,
@@ -76,9 +76,9 @@ if __name__ == '__main__':
     # Now we copy all documents from the folder @documents_path to the data_stream @data_stream_name
     place_documents(client, data_stream_name, documents_path)
 
-    all_placed = copy_from_data_stream(client, data_stream_name)
+    all_placed = copy_from_data_stream(client, data_stream_name, -1, -1, -1)
 
     if not all_placed:
         print("Overwritten documents will be placed in new index.")
         create_index_missing_for_docs(client)
-        get_missing_docs_info(client)
+        get_missing_docs_info(client, data_stream_name, 10, "", False, 0)

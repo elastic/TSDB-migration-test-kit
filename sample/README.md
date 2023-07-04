@@ -47,7 +47,7 @@ the number is the same then we know no loss of data occurred.
 All this is being done when calling the function:
 
 ```python
-copy_from_data_stream(client, data_stream_name)
+copy_from_data_stream
 ```
 
 After the documents have been placed to the TSDB index, two things can happen:
@@ -68,8 +68,8 @@ is not searchable:
 
 ```python
 print("Overwritten documents will be placed in new index.")
-create_index_missing_for_docs(client)
-get_missing_docs_info(client)
+create_index_missing_for_docs(...)
+get_missing_docs_info(...)
 ```
 
 The output of would be something as this:
