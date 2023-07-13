@@ -121,39 +121,52 @@ def create_index_missing_for_docs(client: Elasticsearch):
     client.reindex(source={"index": tsdb_index}, dest=dest, refresh=True)
 
 
-def build_query(dimensions: {}):
+def build_query(dimensions_exist: {}, dimensions_missing: []):
     """
     Build query to retrieve document based on the dimensions.
-    :param dimensions: Dictionary containing field and field value.
+    :param dimensions_exist: Dictionary containing field and field value of the dimensions that exist in the document.
+    :param dimensions_missing: Dictionary of the dimension fields missing in the document.
     :return: query.
     """
     query = {
         "bool": {
-            "must": []
+            "must": [],
+            "must_not": []
         }
     }
-    for field in dimensions:
+    for field in dimensions_exist:
         term = {
             "term": {
-                field: dimensions[field]
+                field: dimensions_exist[field]
             }
         }
         query["bool"]["must"].append(term)
 
+    for field in dimensions_missing:
+        exists = {
+            "exists": {
+                "field": field
+            }
+        }
+        query["bool"]["must_not"].append(exists)
+
     return query
 
 
-def get_and_place_documents(client: Elasticsearch, data_stream: str, dir_name: str, dimensions_values: {}, n: int, number_of_docs):
+def get_and_place_documents(client: Elasticsearch, data_stream: str, dir_name: str, dimensions_values: {},
+                            dimensions_missing: [], n: int, number_of_docs):
     """
     Given the dimensions, place the documents in the directory.
     :param client: ES client.
+    :param data_stream: Name of the data stream.
     :param dir_name: Name of the parent directory.
-    :param dimensions_values:
+    :param dimensions_values: Values for the dimension fields that exist in the document.
+    :param dimensions_missing: List of dimension fields missing in the document.
     :param n: Number of the directory inside the parent directory. Example: 1 would create dir_name/1.
     :param number_of_docs: Number of documents to get with that set of dimensions.
     :param index_name: Index name in which documents are stored.
     """
-    query = build_query(dimensions_values)
+    query = build_query(dimensions_values, dimensions_missing)
 
     res = client.search(index=data_stream, query=query, sort={"@timestamp": "asc"}, size=number_of_docs)
 
@@ -195,6 +208,7 @@ def get_missing_docs_info(client: Elasticsearch, data_stream: str, display_docs:
     for doc in res["hits"]["hits"]:
         if get_overlapping_files:
             dimensions_values = {"@timestamp": doc["_source"]["@timestamp"]}
+            dimensions_missing = []
 
         print("- Timestamp {}:".format(doc["_source"]["@timestamp"]))
         for dimension in dimensions:
@@ -206,11 +220,14 @@ def get_missing_docs_info(client: Elasticsearch, data_stream: str, display_docs:
                     break
                 el = el[key]
             print("\t{}: {}".format(dimension, el))
-            if el != "(Missing value)" and get_overlapping_files:
-                dimensions_values[dimension] = el
+            if get_overlapping_files:
+                if el != "(Missing value)":
+                    dimensions_values[dimension] = el
+                else:
+                    dimensions_missing.append(dimension)
 
         if get_overlapping_files:
-            get_and_place_documents(client, data_stream, dir, dimensions_values, n, copy_docs_per_dimension)
+            get_and_place_documents(client, data_stream, dir, dimensions_values, dimensions_missing, n, copy_docs_per_dimension)
             n += 1
 
 
