@@ -33,7 +33,7 @@ python -m pip install elasticsearch
 ## Set up
 
 This set up is only to set the default values through the `main.py` file. If
-you rather do this through the command line, skip this and refer to [Run](#Run).
+you rather do this through the command line, skip this and refer to [run](#run).
 
 You need to set the variables in the `main.py` file for the ES python client:
 
