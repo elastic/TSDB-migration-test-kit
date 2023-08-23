@@ -3,15 +3,17 @@
 This repository contains the code to a new approach for testing
 TSDB migration. 
 
-# Table of Contents
-1. [Installation](#Installation)
-2. [Requirements](#Requirements)
-3. [Set up](#Set-up)
-4. [Run](#Run)
-5. [Understanding the program](#Understanding-the-program)
-6. [Realistic output example](#Realistic-output-example)
-7. [Testing the dashboard](#Testing-the-dashboard)
-8. [Other questions](#Other-questions)
+## Table of Contents
+
+* [Installation](#installation)
+* [Requirements](#requirements)
+* [Set up](#set-up)
+* [Run](#run)
+* [Algorithm](#algorithm)
+* [Understanding the program](#understanding-the-program)
+* [Realistic output example](#realistic-output-example)
+* [Testing the dashboard](#testing-the-dashboard)
+* [Other questions](#other-questions)
 
 
 ## Installation
@@ -24,7 +26,7 @@ python -m pip install elasticsearch
 
 ## Requirements
 
-1. You need to be running ElasticSearch.
+1. You need to be running Elasticsearch.
 2. You need a data stream with at least one field set as dimension.
 
 
@@ -61,6 +63,13 @@ Additionally, the `main.py` has defaults for:
    "max_docs": 10000
    ```
   `-1` indicates that all documents from the index must be placed to the TSDB index.
+    > **Note**: If you are trying to copy many documents, you migh run into this error:
+    > ```console
+    > elastic_transport.ConnectionTimeout: Connection timed out
+    > ```
+    > This happens because the elasticsearch python client has a default timeout
+    that was not changed in this testing kit. Setting `max_docs` to a lower value
+    will be enough to make that error disappear.
 - The index number from the data stream you want to use to retrieve the documents,
 and the index number for the index you want to use for the settings and mappings:
    ```python
